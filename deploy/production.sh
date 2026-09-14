@@ -4,6 +4,7 @@ cd /opt/loyaltyflow
 export DEBIAN_FRONTEND=noninteractive
 DOMAIN=31.77.207.38.nip.io
 SCHEME=https
+API_PORT=3100
 
 apt-get update
 apt-get install -y git curl openssl nginx docker.io certbot python3-certbot-nginx
@@ -40,7 +41,7 @@ server {
   root /opt/loyaltyflow;
   index index.html;
   location /.well-known/acme-challenge/ { try_files \$uri =404; }
-  location /api/ { proxy_pass http://127.0.0.1:3000/api/; proxy_set_header Host \$host; proxy_set_header X-Forwarded-Proto \$scheme; proxy_set_header X-Real-IP \$remote_addr; }
+  location /api/ { proxy_pass http://127.0.0.1:${API_PORT}/api/; proxy_set_header Host \$host; proxy_set_header X-Forwarded-Proto \$scheme; proxy_set_header X-Real-IP \$remote_addr; }
   location / { try_files \$uri \$uri/ /index.html; }
 }
 NGINX
@@ -70,7 +71,7 @@ server {
   root /opt/loyaltyflow;
   index index.html;
   client_max_body_size 1m;
-  location /api/ { proxy_pass http://127.0.0.1:3000/api/; proxy_http_version 1.1; proxy_set_header Host \$host; proxy_set_header X-Forwarded-Proto https; proxy_set_header X-Real-IP \$remote_addr; }
+  location /api/ { proxy_pass http://127.0.0.1:${API_PORT}/api/; proxy_http_version 1.1; proxy_set_header Host \$host; proxy_set_header X-Forwarded-Proto https; proxy_set_header X-Real-IP \$remote_addr; }
   location / { try_files \$uri \$uri/ /index.html; }
   add_header X-Content-Type-Options nosniff always;
   add_header Referrer-Policy strict-origin-when-cross-origin always;
@@ -79,7 +80,7 @@ NGINX
 nginx -t
 systemctl reload nginx
 sleep 5
-curl -fsS http://127.0.0.1:3000/api/health
+curl -fsS http://127.0.0.1:${API_PORT}/api/health
 curl -kfsS --resolve "${DOMAIN}:443:127.0.0.1" "${SCHEME}://${DOMAIN}/api/health"
 echo
 SYNC=$(grep '^SYNC_SECRET=' .env | cut -d= -f2-)

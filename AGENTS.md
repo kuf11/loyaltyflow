@@ -1,50 +1,121 @@
 <!-- token-diet:begin -->
 TOKEN-DIET MODE IS ACTIVE. Cut wasted words, never substance, correctness, or required detail.
 
-- Lead with the answer; omit filler and request restatement; report deltas, not narration.
-- Keep docs, plans, comments, and handoffs dense but complete; comment the non-obvious why.
-- Tests: cover key and critical edge paths; never skip money/auth/data-loss coverage.
-- Code: YAGNI; concise, idiomatic, readable; no dead code; preserve exact identifiers, commands, and errors.
-- Context: search before reading; read only relevant ranges; batch independent calls; reuse current context; minimize turns; stop when there is enough evidence to act.
-- Verification: targeted checks while iterating, full suite once at the end.
-- Sub-agents: delegate bounded exploration cheaply; retain correctness-sensitive verification.
-
-Concision applies to output, never to reasoning needed for correctness. Claude-specific full rules: .claude/skills/token-diet/SKILL.md.
+- Lead with the answer; omit filler; report deltas, not narration.
+- Keep docs and handoffs dense but complete; comment the non-obvious why.
+- Tests must cover critical money, auth and data-loss paths.
+- Code: concise, idiomatic, readable; no dead code; preserve exact identifiers and errors.
+- Search before reading; read only relevant files; batch independent calls.
+- Run targeted checks while iterating and a final relevant check before publishing.
 <!-- token-diet:end -->
+
+# Инструкция для агентов
+
+## Перед любыми правками
+
+1. Прочитать `AGENTS.md` и `README.md`.
+2. Прочитать связанные HTML, CSS, JS, backend-файлы и тесты до изменения кода.
+3. Работать в актуальной стабильной ветке `backup/pre-glass-redesign-20260915`.
+4. Не переносить изменения из `main`: там находится отменённый glass-redesign.
+5. Не запрашивать SSH и не писать команду `ssh`: пользователь уже открыт в терминале production-сервера.
+6. Не запрашивать и не выводить `.env`, токены, пароли и приватные ключи.
+
+## GitHub
+
+Репозиторий: `kuf11/loyaltyflow`.
+
+После проверки отправлять изменения в:
+
+```text
+backup/pre-glass-redesign-20260915
+```
+
+В финальном ответе указывать:
+
+- что изменено;
+- какие проверки выполнены;
+- короткий SHA коммита;
+- точную команду обновления production.
 
 ## Обновление production-сервера
 
-Сервер уже открыт пользователем в терминале и находится в `/opt/loyaltyflow`. Не добавлять команду `ssh` и не запрашивать SSH-доступ. После успешной отправки проверенных правок в ветку `main` всегда дать пользователю подходящую команду обновления.
+Production-каталог:
 
-### Только статический frontend или документация
-
-Для изменений в `*.html`, `*.css`, браузерных `*.js`, изображениях и Markdown:
-
-```bash
-cd /opt/loyaltyflow && git pull --ff-only
+```text
+/opt/loyaltyflow
 ```
 
-Docker не пересобирать. Попросить полностью закрыть и заново открыть Telegram Mini App, если изменялся его frontend.
-
-### Backend, зависимости или Docker
-
-Для изменений в `api/`, `api/package.json`, `api/Dockerfile` или `docker-compose.yml`:
+### 1. Сначала проверить локальные изменения
 
 ```bash
-cd /opt/loyaltyflow && git pull --ff-only && docker compose up -d --build
+cd /opt/loyaltyflow
+git status -sb
 ```
 
-Затем проверить:
+Если есть важные незакоммиченные изменения, не удалять их молча. Сначала сохранить патч:
 
 ```bash
-docker compose ps && curl -fsS http://127.0.0.1:3100/api/health
+git diff > /root/loyaltyflow-local-$(date +%Y%m%d-%H%M%S).patch
 ```
 
-### Правила безопасности обновления
+### 2. Статический frontend или документация
 
-- Перед отправкой изменений прочитать `AGENTS.md`, связанные файлы и тесты.
-- Не запускать `git reset --hard`, `git clean`, удаление данных или миграции с потерей данных без явного подтверждения пользователя.
-- Если `git pull --ff-only` сообщает о расхождении веток или конфликте, остановиться и запросить вывод `git status -sb` и `git log --oneline --decorate -8`; не советовать `rebase --skip`.
-- Production-сервер должен оставаться на ветке `main`, отслеживающей `origin/main`.
-- Не показывать и не запрашивать содержимое `.env`, токены, пароли или приватные ключи.
-- В финальном сообщении перечислить изменённые области, проверки, короткий SHA последнего коммита и точную команду обновления сервера.
+Для изменений в корневых `*.html`, `*.css`, браузерных `*.js`, изображениях и Markdown:
+
+```bash
+cd /opt/loyaltyflow
+git fetch origin backup/pre-glass-redesign-20260915
+git reset --hard FETCH_HEAD
+git log -1 --oneline
+```
+
+Docker не пересобирать. Если менялся Telegram Mini App, попросить полностью закрыть его в Telegram и открыть заново. Для кабинета — `Ctrl + Shift + R`.
+
+### 3. Backend, зависимости или Docker
+
+Для изменений в `api/`, `api/package.json`, `api/Dockerfile`, `docker-compose.yml` или `deploy/`:
+
+```bash
+cd /opt/loyaltyflow
+git fetch origin backup/pre-glass-redesign-20260915
+git reset --hard FETCH_HEAD
+docker compose up -d --build
+docker compose ps
+curl -fsS http://127.0.0.1:3100/api/health
+```
+
+Если health-check завершился ошибкой, запросить:
+
+```bash
+docker compose logs --tail=200
+```
+
+Не выполнять миграции с потерей данных, `git clean`, удаление volume или базы без явного подтверждения пользователя.
+
+## Особенности архитектуры
+
+- Карта файлов и подсистем находится в `README.md`.
+- `miniapp.html` загружает несколько поколений runtime-скриптов. Порядок критичен.
+- `miniapp-stock-fix-v2.js` должен идти после основных Mini App-скриптов.
+- `miniapp-search-ui-fix.js` должен загружаться последним.
+- Не возвращать `prompt()`, `alert()` и нативные окна в интерфейс рассылок.
+- Расписание рассылок работает по Москве (`Europe/Moscow`, UTC+03:00).
+- Оплата намеренно отключена в `api/security-preload.js` до подключения проверенной платёжной системы.
+
+## Проверки
+
+Для изменённых браузерных JS:
+
+```bash
+node --check путь/к/файлу.js
+```
+
+Для backend:
+
+```bash
+cd /opt/loyaltyflow/api
+npm test
+npm run check
+```
+
+Для UI проверить desktop и mobile, кликабельность, переполнение, скролл и отсутствие ошибок консоли. Для Mini App отдельно проверить запуск внутри Telegram, поиск, остатки, корзину и регистрацию.

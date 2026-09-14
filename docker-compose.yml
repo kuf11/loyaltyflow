@@ -39,5 +39,19 @@ services:
         condition: service_healthy
     ports:
       - "127.0.0.1:3100:3000"
+  bot-menu-sync:
+    build: ./api
+    restart: unless-stopped
+    command: ["node","bot-menu-sync.js"]
+    environment:
+      DATABASE_URL: postgresql://loyaltyflow:${POSTGRES_PASSWORD}@db:5432/loyaltyflow
+      JWT_SECRET: ${JWT_SECRET}
+      PUBLIC_APP_URL: ${PUBLIC_APP_URL}
+      BOT_MENU_SYNC_INTERVAL_MS: ${BOT_MENU_SYNC_INTERVAL_MS:-900000}
+    depends_on:
+      db:
+        condition: service_healthy
+      api:
+        condition: service_started
 volumes:
   postgres_data:

@@ -23,9 +23,13 @@ BUSINESS_SLUG=main
 PUBLIC_APP_URL=${SCHEME}://${DOMAIN}/miniapp.html?tenant=main
 CORS_ORIGINS=${SCHEME}://${DOMAIN}
 TELEGRAM_BOT_TOKEN=
+TURNSTILE_SITE_KEY=
+TURNSTILE_SECRET_KEY=
 RESEND_API_KEY=
 EMAIL_FROM=
+ALLOW_DEV_CAPTCHA=false
 ALLOW_DEV_EMAIL_CODE=false
+AUTO_APPROVE_REGISTRATIONS=false
 ENV
   chmod 600 .env
 fi
@@ -70,8 +74,12 @@ server {
   client_max_body_size 1m;
   location /api/ { proxy_pass http://127.0.0.1:${API_PORT}/api/; proxy_http_version 1.1; proxy_set_header Host \$host; proxy_set_header X-Forwarded-Proto https; proxy_set_header X-Real-IP \$remote_addr; }
   location / { try_files \$uri \$uri/ /index.html; }
+  add_header Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; script-src 'self' 'unsafe-inline' https://telegram.org https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data: blob: https:; connect-src 'self' https://api.telegram.org https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; font-src 'self' data: https://cdn.jsdelivr.net; form-action 'self'; frame-ancestors 'self' https://web.telegram.org https://*.telegram.org; upgrade-insecure-requests" always;
+  add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
   add_header X-Content-Type-Options nosniff always;
+  add_header X-Frame-Options SAMEORIGIN always;
   add_header Referrer-Policy strict-origin-when-cross-origin always;
+  add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
 }
 NGINX
 nginx -t

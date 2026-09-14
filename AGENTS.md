@@ -1,13 +1,54 @@
-<!-- token-diet:begin -->
-TOKEN-DIET MODE IS ACTIVE. Cut wasted words, never substance, correctness, or required detail.
+# LoyaltyFlow — карта для AI-агентов
 
-- Lead with the answer; omit filler and request restatement; report deltas, not narration.
-- Keep docs, plans, comments, and handoffs dense but complete; comment the non-obvious why.
-- Tests: cover key and critical edge paths; never skip money/auth/data-loss coverage.
-- Code: YAGNI; concise, idiomatic, readable; no dead code; preserve exact identifiers, commands, and errors.
-- Context: search before reading; read only relevant ranges; batch independent calls; reuse current context; minimize turns; stop when there is enough evidence to act.
-- Verification: targeted checks while iterating, full suite once at the end.
-- Sub-agents: delegate bounded exploration cheaply; retain correctness-sensitive verification.
+## Что это
 
-Concision applies to output, never to reasoning needed for correctness. Claude-specific full rules: .claude/skills/token-diet/SKILL.md.
-<!-- token-diet:end -->
+LoyaltyFlow — кабинет владельца и Telegram Mini App для программы лояльности. Стек: статический HTML/CSS/JS, Node.js/Express, PostgreSQL, Docker Compose, Telegram Bot API, Cloudflare Turnstile и Resend.
+
+## С чего начинать
+
+- Общая архитектура и полный список файлов: `README.md`.
+- Безопасность, секреты и границы доверия: `SECURITY.md`.
+- Backend-маршруты и middleware: `api/server.js`.
+- Бонусы, клиенты, покупки и транзакции: `api/loyalty.js`.
+- Криптография и Telegram `initData`: `api/security.js`.
+- Регистрация, captcha и email: `api/registration-security.js`.
+- Схема запуска сервисов: `docker-compose.yml`.
+- Активные файлы Mini App определять по подключениям в `miniapp.html`; не читать все `miniapp-v*.js/css` подряд.
+- Активные файлы кабинета определять по `<script>`/`<link>` в соответствующей HTML-странице.
+
+## Где хранятся данные
+
+- `users`: владельцы, trial, Telegram token (зашифрован), JSON-дизайн Mini App.
+- `verification_codes`: временные email-коды.
+- `businesses`, `mini_app_configs`: базовая конфигурация программы.
+- `loyalty_customers`: Telegram-клиенты, телефоны, баланс и расходы.
+- `loyalty_transactions`: покупки, начисления и списания.
+- Схема создаётся в `api/init.sql`, `api/server.js` и `api/loyalty.js`.
+
+## Правила правок
+
+1. Искать символ или маршрут перед чтением большого файла.
+2. Не редактировать старую версию `miniapp-v*`, пока `miniapp.html` не подтвердит, что она подключена.
+3. Не менять денежную/бонусную логику без транзакции БД и теста на повторный запрос.
+4. Не доверять цене, сумме, роли, tenant, Telegram ID или статусу оплаты из браузера.
+5. Не логировать токены, пароли, email-коды, телефоны и полный Telegram `initData`.
+6. Сохранять параметризованные SQL-запросы и tenant/owner-фильтрацию.
+7. Новые production-флаги делать безопасными по умолчанию.
+8. После backend-правок запускать `cd api && npm test && npm run check`.
+9. Пояснять неочевидное «почему», не комментировать очевидный синтаксис.
+10. Не добавлять зависимости без необходимости; при добавлении фиксировать lock-файл.
+
+## Критические границы доверия
+
+- Покупка и начисление бонусов должны подтверждаться доверенным сервером/кассой, а не клиентским Mini App.
+- Владелец определяется только проверенной сессией.
+- Telegram-клиент определяется только валидным и свежим `initData`.
+- Платформенный admin API не должен становиться публичным.
+- Bot token хранить только зашифрованным и не возвращать клиенту.
+
+## Экономия контекста
+
+- Для UI читать HTML → только подключённые JS/CSS → нужную функцию/селектор.
+- Для API искать маршрут → читать импортированный helper → соответствующую таблицу.
+- Для данных начинать с раздела «Данные» в `README.md`, затем читать только код создания нужной таблицы.
+- Переиспользовать уже загруженные снимки файлов и группировать независимые чтения.

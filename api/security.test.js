@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
+import {passwordHash,passwordOk,signSession,verifySession,encryptSecret,decryptSecret,parseAllowedOrigins,verifyTelegramInitData} from './security.js';
+
+test('password hashes verify only the correct password',()=>{const stored=passwordHash('Strong#123');assert.equal(passwordOk('Strong#123',stored),true);assert.equal(passwordOk('wrong',stored),false);assert.equal(passwordOk('Strong#123','broken'),false);});
+test('session tokens reject tampering and expiration',()=>{const secret='test-secret',token=signSession({id:'u1',email:'a@example.com'},secret,1000,10_000);assert.equal(verifySession(token,secret,10_500).id,'u1');assert.equal(verifySession(token+'x',secret,10_500),null);assert.equal(verifySession(token,secret,11_001),null);assert.equal(verifySession(token,'other-secret',10_500),null);});
+test('encrypted secrets round-trip and reject a wrong key',()=>{const value=encryptSecret('123:telegram-token','secret-a');assert.equal(decryptSecret(value,'secret-a'),'123:telegram-token');assert.throws(()=>decryptSecret(value,'secret-b'));});
+test('allowed origins are explicit and normalized',()=>{const origins=parseAllowedOrigins('https:'+'//example.com/miniapp.html?tenant=main','https:'+'//admin.example.com, https:'+'//example.com');assert.deepEqual([...origins].sort(),['https:'+'//admin.example.com','https:'+'//example.com']);});
+function telegramData(botToken,user,authDate){const params=new URLSearchParams({auth_date:String(authDate),query_id:'q1',user:JSON.stringify(user)}),check=[...params.entries()].sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>`${k}=${v}`).join('\n'),key=crypto.createHmac('sha256','WebAppData').update(botToken).digest();params.set('hash',crypto.createHmac('sha256',key).update(check).digest('hex'));return params.toString();}
+test('Telegram initData verifies signature and freshness',()=>{const now=2_000_000_000,token='123456:ABC',user={id:42,first_name:'Test'},valid=telegramData(token,user,now-10);assert.deepEqual(verifyTelegramInitData(valid,token,{nowSeconds:now}),user);assert.equal(verifyTelegramInitData(valid,'wrong',{nowSeconds:now}),null);assert.equal(verifyTelegramInitData(telegramData(token,user,now-90_000),token,{nowSeconds:now}),null);});

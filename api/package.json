@@ -1,1 +1,1 @@
-{"name":"loyaltyflow-api","version":"1.0.0","private":true,"type":"module","scripts":{"start":"node server.js"},"dependencies":{"express":"^4.21.2","helmet":"^8.0.0","pg":"^8.13.1","express-rate-limit":"^7.5.0"}}
+{"name":"loyaltyflow-api","version":"1.0.0","private":true,"type":"module","scripts":{"start":"node server.js","test":"node --test","check":"node --check server.js && node --check security.js"},"dependencies":{"express":"^4.21.2","helmet":"^8.0.0","pg":"^8.13.1","express-rate-limit":"^7.5.0"}}

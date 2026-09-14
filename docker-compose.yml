@@ -53,5 +53,22 @@ services:
         condition: service_healthy
       api:
         condition: service_started
+  admin-api:
+    build: ./api
+    restart: unless-stopped
+    command: ["node","admin-broadcast-server.js"]
+    environment:
+      ADMIN_API_PORT: 3001
+      DATABASE_URL: postgresql://loyaltyflow:${POSTGRES_PASSWORD}@db:5432/loyaltyflow
+      JWT_SECRET: ${JWT_SECRET}
+      PUBLIC_APP_URL: ${PUBLIC_APP_URL}
+      PLATFORM_ADMIN_EMAILS: ${PLATFORM_ADMIN_EMAILS:-kuf454647@gmail.com}
+    depends_on:
+      db:
+        condition: service_healthy
+      api:
+        condition: service_started
+    ports:
+      - "127.0.0.1:3101:3001"
 volumes:
   postgres_data:

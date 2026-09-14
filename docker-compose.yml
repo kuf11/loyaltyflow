@@ -33,6 +33,7 @@ services:
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       EMAIL_FROM: ${EMAIL_FROM:-}
       ALLOW_DEV_EMAIL_CODE: ${ALLOW_DEV_EMAIL_CODE:-false}
+      AUTO_APPROVE_REGISTRATIONS: ${AUTO_APPROVE_REGISTRATIONS:-false}
     depends_on:
       db:
         condition: service_healthy

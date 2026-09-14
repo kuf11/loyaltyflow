@@ -24,11 +24,12 @@ services:
       SYNC_SECRET: ${SYNC_SECRET}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       PUBLIC_APP_URL: ${PUBLIC_APP_URL}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
       ADMIN_KEY: ${ADMIN_KEY}
       JWT_SECRET: ${JWT_SECRET}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       EMAIL_FROM: ${EMAIL_FROM:-}
-      ALLOW_DEV_EMAIL_CODE: ${ALLOW_DEV_EMAIL_CODE:-true}
+      ALLOW_DEV_EMAIL_CODE: ${ALLOW_DEV_EMAIL_CODE:-false}
     depends_on:
       db:
         condition: service_healthy

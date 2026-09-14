@@ -9,14 +9,7 @@ API_PORT=3100
 apt-get update
 apt-get install -y git curl openssl nginx docker.io certbot python3-certbot-nginx
 systemctl enable --now docker nginx
-if docker compose version >/dev/null 2>&1; then
-  COMPOSE=(docker compose)
-elif command -v docker-compose >/dev/null 2>&1; then
-  COMPOSE=(docker-compose)
-else
-  apt-get install -y docker-compose-plugin 2>/dev/null || apt-get install -y docker-compose
-  if docker compose version >/dev/null 2>&1; then COMPOSE=(docker compose); else COMPOSE=(docker-compose); fi
-fi
+if docker compose version >/dev/null 2>&1; then COMPOSE=(docker compose); elif command -v docker-compose >/dev/null 2>&1; then COMPOSE=(docker-compose); else apt-get install -y docker-compose-plugin 2>/dev/null || apt-get install -y docker-compose; if docker compose version >/dev/null 2>&1; then COMPOSE=(docker compose); else COMPOSE=(docker-compose); fi; fi
 
 git fetch --prune origin
 git reset --hard origin/main
@@ -24,9 +17,15 @@ if [ ! -f .env ]; then
   cat >.env <<ENV
 POSTGRES_PASSWORD=$(openssl rand -hex 24)
 SYNC_SECRET=$(openssl rand -hex 32)
+ADMIN_KEY=$(openssl rand -hex 24)
+JWT_SECRET=$(openssl rand -hex 48)
 BUSINESS_SLUG=main
 PUBLIC_APP_URL=${SCHEME}://${DOMAIN}/miniapp.html?tenant=main
+CORS_ORIGINS=${SCHEME}://${DOMAIN}
 TELEGRAM_BOT_TOKEN=
+RESEND_API_KEY=
+EMAIL_FROM=
+ALLOW_DEV_EMAIL_CODE=false
 ENV
   chmod 600 .env
 fi
@@ -49,9 +48,7 @@ ln -sfn /etc/nginx/sites-available/loyaltyflow /etc/nginx/sites-enabled/loyaltyf
 nginx -t
 systemctl reload nginx
 
-if [ ! -d "/etc/letsencrypt/live/${DOMAIN}" ]; then
-  certbot certonly --webroot -w /opt/loyaltyflow -d "${DOMAIN}" --agree-tos --register-unsafely-without-email -n
-fi
+if [ ! -d "/etc/letsencrypt/live/${DOMAIN}" ]; then certbot certonly --webroot -w /opt/loyaltyflow -d "${DOMAIN}" --agree-tos --register-unsafely-without-email -n; fi
 cat >/etc/nginx/sites-available/loyaltyflow <<NGINX
 server {
   listen 80 default_server;
@@ -83,8 +80,6 @@ sleep 5
 curl -fsS http://127.0.0.1:${API_PORT}/api/health
 curl -kfsS --resolve "${DOMAIN}:443:127.0.0.1" "${SCHEME}://${DOMAIN}/api/health"
 echo
-SYNC=$(grep '^SYNC_SECRET=' .env | cut -d= -f2-)
 echo "Admin: ${SCHEME}://${DOMAIN}/"
 echo "Mini App: ${SCHEME}://${DOMAIN}/miniapp.html?tenant=main"
-echo "Sync URL: ${SCHEME}://${DOMAIN}/api/v1/sync/${SYNC}"
-echo "To enable Telegram: edit TELEGRAM_BOT_TOKEN in /opt/loyaltyflow/.env, then run ${COMPOSE[*]} up -d --build api"
+echo 'Secrets are stored in /opt/loyaltyflow/.env. Do not share them.'

@@ -3,77 +3,21 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import pg from 'pg';
 import crypto from 'node:crypto';
-
-const { Pool } = pg;
-const app = express();
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const port = Number(process.env.PORT || 3000);
-const slug = process.env.BUSINESS_SLUG || 'main';
-const syncSecret = process.env.SYNC_SECRET || '';
-const appUrl = process.env.PUBLIC_APP_URL || '';
-const botToken = process.env.TELEGRAM_BOT_TOKEN || '';
-const hash = (value) => crypto.createHash('sha256').update(String(value)).digest('hex');
-
-app.use(helmet({ contentSecurityPolicy: false }));
-app.use((req, res, next) => {
-  const origin = req.get('origin');
-  if (origin) res.set('Access-Control-Allow-Origin', origin);
-  res.set('Access-Control-Allow-Headers', 'Content-Type');
-  res.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  if (req.method === 'OPTIONS') return res.sendStatus(204);
-  next();
-});
-app.use(express.json({ limit: '1mb' }));
-app.use(rateLimit({ windowMs: 60_000, limit: 120, standardHeaders: true, legacyHeaders: false }));
-
-const defaultDesign = { name:'Моя программа', accent:'#22a77a', header:'#102c28', background:'#eef2f1', card:'#ffffff', text:'#172321', font:'Arial, sans-serif', fontSize:15, titleSize:22, radius:16, spacing:12, glass:true, shadow:true, logo:'', title:'Добро пожаловать!', description:'Получайте вознаграждения за покупки.', qr:true, offers:true, history:true };
-
-async function bootstrap() {
-  if (!syncSecret) throw new Error('SYNC_SECRET is required');
-  await pool.query('INSERT INTO businesses(slug,name,app_url,sync_secret_hash) VALUES($1,$2,$3,$4) ON CONFLICT(slug) DO UPDATE SET app_url=EXCLUDED.app_url', [slug, 'Моя программа', appUrl, hash(syncSecret)]);
-  await pool.query('INSERT INTO mini_app_configs(business_id,design) SELECT id,$2::jsonb FROM businesses WHERE slug=$1 ON CONFLICT(business_id) DO NOTHING', [slug, JSON.stringify(defaultDesign)]);
-}
-
-app.get('/api/health', async (_req, res) => {
-  try { await pool.query('select 1'); res.json({ ok: true }); }
-  catch { res.status(503).json({ ok: false }); }
-});
-
-app.get('/api/v1/public/:slug/config', async (req, res) => {
-  const result = await pool.query('SELECT b.slug,b.name,b.bot_username,b.app_url,c.design,c.updated_at FROM businesses b JOIN mini_app_configs c ON c.business_id=b.id WHERE b.slug=$1', [req.params.slug]);
-  if (!result.rowCount) return res.status(404).json({ error: 'Business not found' });
-  res.set('Cache-Control', 'no-store');
-  res.json(result.rows[0]);
-});
-
-app.post('/api/v1/sync/:secret', async (req, res) => {
-  try {
-    const { design, bot, appUrl: requestedUrl } = req.body || {};
-    if (!design || typeof design !== 'object') return res.status(400).json({ error: 'design is required' });
-    const found = await pool.query('SELECT id,slug FROM businesses WHERE sync_secret_hash=$1', [hash(req.params.secret)]);
-    if (!found.rowCount) return res.status(401).json({ error: 'Invalid sync secret' });
-    const business = found.rows[0];
-    const safeDesign = { ...defaultDesign, ...design };
-    delete safeDesign.syncUrl;
-    await pool.query('BEGIN');
-    await pool.query('UPDATE businesses SET name=$1,bot_username=$2,app_url=$3,updated_at=now() WHERE id=$4', [String(safeDesign.name || 'Моя программа').slice(0,100), String(bot || '').replace('@','').slice(0,100), String(requestedUrl || appUrl).slice(0,500), business.id]);
-    await pool.query('INSERT INTO mini_app_configs(business_id,design,updated_at) VALUES($1,$2::jsonb,now()) ON CONFLICT(business_id) DO UPDATE SET design=EXCLUDED.design,updated_at=now()', [business.id, JSON.stringify(safeDesign)]);
-    await pool.query('COMMIT');
-    let telegramApplied = false;
-    let telegramError = null;
-    if (botToken && (requestedUrl || appUrl)) {
-      const telegramUrl = 'https://api.telegram.org/bot' + botToken + '/setChatMenuButton';
-      const response = await fetch(telegramUrl, { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({ menu_button:{ type:'web_app', text:String(safeDesign.name || 'Открыть'), web_app:{ url:requestedUrl || appUrl } } }) });
-      const data = await response.json();
-      telegramApplied = Boolean(data.ok);
-      if (!data.ok) telegramError = data.description || 'Telegram API error';
-    }
-    res.json({ ok:true, slug:business.slug, telegramApplied, telegramError, publicConfig:'/api/v1/public/' + business.slug + '/config' });
-  } catch (error) {
-    await pool.query('ROLLBACK').catch(() => {});
-    console.error(error);
-    res.status(500).json({ error:'Internal error' });
-  }
-});
-
-bootstrap().then(() => app.listen(port, '0.0.0.0', () => console.log('LoyaltyFlow API on ' + port))).catch((error) => { console.error(error); process.exit(1); });
+const {Pool}=pg,app=express(),pool=new Pool({connectionString:process.env.DATABASE_URL});
+const port=+(process.env.PORT||3000),slug=process.env.BUSINESS_SLUG||'main',syncSecret=process.env.SYNC_SECRET||'',appUrl=process.env.PUBLIC_APP_URL||'',botToken=process.env.TELEGRAM_BOT_TOKEN||'',adminKey=process.env.ADMIN_KEY||'',jwtSecret=process.env.JWT_SECRET||'',devCode=process.env.ALLOW_DEV_EMAIL_CODE==='true';
+const hash=x=>crypto.createHash('sha256').update(String(x)).digest('hex'),b64=x=>Buffer.from(x).toString('base64url');
+const passwordHash=p=>{let salt=crypto.randomBytes(16).toString('hex');return salt+':'+crypto.scryptSync(p,salt,64).toString('hex')},passwordOk=(p,h)=>{try{let [s,x]=h.split(':');return crypto.timingSafeEqual(Buffer.from(x,'hex'),crypto.scryptSync(p,s,64))}catch{return false}},sign=u=>{let body=b64(JSON.stringify({id:u.id,email:u.email,exp:Date.now()+86400000}));return body+'.'+b64(crypto.createHmac('sha256',jwtSecret).update(body).digest())};
+app.use(helmet({contentSecurityPolicy:false}));app.use((q,r,n)=>{let o=q.get('origin');if(o)r.set('Access-Control-Allow-Origin',o);r.set('Access-Control-Allow-Headers','Content-Type,Authorization,X-Admin-Key');r.set('Access-Control-Allow-Methods','GET,POST,OPTIONS');if(q.method==='OPTIONS')return r.sendStatus(204);n()});app.use(express.json({limit:'1mb'}));app.use(rateLimit({windowMs:60000,limit:100}));
+const defaultDesign={name:'Моя программа',accent:'#22a77a',header:'#102c28',background:'#eef2f1',card:'#fff',text:'#172321',font:'Arial, sans-serif',fontSize:15,titleSize:22,radius:16,spacing:12,glass:true,shadow:true,logo:'',title:'Добро пожаловать!',description:'Получайте вознаграждения за покупки.',qr:true,offers:true,history:true};
+async function bootstrap(){if(!syncSecret||!adminKey||!jwtSecret)throw Error('Required secrets are missing');await pool.query(`CREATE TABLE IF NOT EXISTS users(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),full_name text NOT NULL,company text NOT NULL,age int NOT NULL,city text NOT NULL,email text UNIQUE NOT NULL,phone text NOT NULL,password_hash text NOT NULL,status text NOT NULL DEFAULT 'email_pending',trial_start timestamptz,trial_end timestamptz,subscription_status text NOT NULL DEFAULT 'none',created_at timestamptz NOT NULL DEFAULT now())`);await pool.query(`CREATE TABLE IF NOT EXISTS verification_codes(user_id uuid PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,code_hash text NOT NULL,expires_at timestamptz NOT NULL)`);await pool.query(`INSERT INTO businesses(slug,name,app_url,sync_secret_hash) VALUES($1,$2,$3,$4) ON CONFLICT(slug) DO UPDATE SET app_url=EXCLUDED.app_url`,[slug,'Моя программа',appUrl,hash(syncSecret)]);await pool.query(`INSERT INTO mini_app_configs(business_id,design) SELECT id,$2::jsonb FROM businesses WHERE slug=$1 ON CONFLICT(business_id) DO NOTHING`,[slug,JSON.stringify(defaultDesign)])}
+async function sendCode(email,code){let key=process.env.RESEND_API_KEY;if(!key)return false;let r=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:'Bearer '+key,'Content-Type':'application/json'},body:JSON.stringify({from:process.env.EMAIL_FROM||'LoyaltyFlow <onboarding@resend.dev>',to:[email],subject:'Код регистрации LoyaltyFlow',html:'<h2>Код подтверждения</h2><p style="font-size:26px"><b>'+code+'</b></p><p>Код действует 15 минут.</p>'})});return r.ok}
+app.get('/api/health',async(_q,r)=>{try{await pool.query('select 1');r.json({ok:true})}catch{r.status(503).json({ok:false})}});
+app.post('/api/v1/auth/register',async(q,r)=>{try{let {fullName,company,age,city,email,phone,password}=q.body||{};email=String(email||'').trim().toLowerCase();if(!fullName||!company||!city||!email||!phone||!password||+age<14)return r.status(400).json({error:'Заполните все поля'});if(!/^(?=.*[A-Za-zА-Яа-я])(?=.*\d)(?=.*[#@]).{8,}$/.test(password))return r.status(400).json({error:'Пароль: минимум 8 символов, буква, цифра и # или @'});if((await pool.query('select 1 from users where email=$1',[email])).rowCount)return r.status(409).json({error:'Email уже зарегистрирован'});let u=await pool.query(`insert into users(full_name,company,age,city,email,phone,password_hash) values($1,$2,$3,$4,$5,$6,$7) returning id`,[String(fullName).slice(0,120),String(company).slice(0,120),+age,String(city).slice(0,80),email,String(phone).slice(0,40),passwordHash(password)]),code=String(crypto.randomInt(100000,999999));await pool.query(`insert into verification_codes(user_id,code_hash,expires_at) values($1,$2,now()+interval '15 minutes')`,[u.rows[0].id,hash(code)]);let sent=await sendCode(email,code);r.status(201).json({ok:true,emailSent:sent,status:'email_pending',message:sent?'Код отправлен на email':'Почтовый сервис ещё не подключён',...(devCode&&!sent?{testCode:code}:{})})}catch(e){console.error(e);r.status(500).json({error:'Ошибка регистрации'})}});
+app.post('/api/v1/auth/verify',async(q,r)=>{let email=String(q.body?.email||'').toLowerCase(),code=String(q.body?.code||'');let x=await pool.query(`select u.id from users u join verification_codes c on c.user_id=u.id where u.email=$1 and c.code_hash=$2 and c.expires_at>now()`,[email,hash(code)]);if(!x.rowCount)return r.status(400).json({error:'Неверный или просроченный код'});await pool.query(`update users set status='pending_admin' where id=$1`,[x.rows[0].id]);await pool.query('delete from verification_codes where user_id=$1',[x.rows[0].id]);r.json({ok:true,status:'pending_admin',message:'Email подтверждён. Заявка ожидает одобрения.'})});
+app.post('/api/v1/auth/login',async(q,r)=>{let email=String(q.body?.email||'').toLowerCase(),u=(await pool.query('select * from users where email=$1',[email])).rows[0];if(!u||!passwordOk(String(q.body?.password||''),u.password_hash))return r.status(401).json({error:'Неверный email или пароль'});if(u.status==='email_pending')return r.status(403).json({status:u.status,error:'Подтвердите email'});if(u.status==='pending_admin')return r.status(403).json({status:u.status,error:'Заявка ожидает одобрения администратора'});if(u.status==='trial'&&new Date(u.trial_end)<new Date())return r.status(402).json({status:'subscription_required',price:5000,error:'Пробный период завершён'});r.json({ok:true,token:sign(u),status:u.status,trialEnd:u.trial_end,plan:{price:5000,currency:'RUB',period:'month'}})});
+const admin=(q,r,n)=>{if(!adminKey||q.get('X-Admin-Key')!==adminKey)return r.status(401).json({error:'Unauthorized'});n()};
+app.get('/api/v1/admin/pending',admin,async(_q,r)=>{let x=await pool.query(`select id,full_name,company,age,city,email,phone,created_at from users where status='pending_admin' order by created_at`);r.json({users:x.rows})});
+app.post('/api/v1/admin/approve/:id',admin,async(q,r)=>{let x=await pool.query(`update users set status='trial',trial_start=now(),trial_end=now()+interval '7 days' where id=$1 and status='pending_admin' returning email,trial_end`,[q.params.id]);if(!x.rowCount)return r.status(404).json({error:'Заявка не найдена'});r.json({ok:true,user:x.rows[0]})});
+app.get('/api/v1/public/:slug/config',async(q,r)=>{let x=await pool.query(`SELECT b.slug,b.name,b.bot_username,b.app_url,c.design,c.updated_at FROM businesses b JOIN mini_app_configs c ON c.business_id=b.id WHERE b.slug=$1`,[q.params.slug]);if(!x.rowCount)return r.status(404).json({error:'Business not found'});r.set('Cache-Control','no-store');r.json(x.rows[0])});
+app.post('/api/v1/sync/:secret',async(q,r)=>{try{let {design,bot,appUrl:requestedUrl}=q.body||{};if(!design||typeof design!=='object')return r.status(400).json({error:'design is required'});let f=await pool.query('select id,slug from businesses where sync_secret_hash=$1',[hash(q.params.secret)]);if(!f.rowCount)return r.status(401).json({error:'Invalid sync secret'});let b=f.rows[0],d={...defaultDesign,...design};delete d.syncUrl;await pool.query(`update businesses set name=$1,bot_username=$2,app_url=$3,updated_at=now() where id=$4`,[String(d.name).slice(0,100),String(bot||'').replace('@','').slice(0,100),String(requestedUrl||appUrl).slice(0,500),b.id]);await pool.query(`insert into mini_app_configs(business_id,design,updated_at) values($1,$2::jsonb,now()) on conflict(business_id) do update set design=excluded.design,updated_at=now()`,[b.id,JSON.stringify(d)]);let telegramApplied=false,telegramError=null;if(botToken&&(requestedUrl||appUrl)){let t=await fetch('https://api.telegram.org/bot'+botToken+'/setChatMenuButton',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({menu_button:{type:'web_app',text:String(d.name||'Открыть'),web_app:{url:requestedUrl||appUrl}}})}),data=await t.json();telegramApplied=!!data.ok;telegramError=data.ok?null:data.description}r.json({ok:true,telegramApplied,telegramError})}catch(e){console.error(e);r.status(500).json({error:'Internal error'})}});
+bootstrap().then(()=>app.listen(port,'0.0.0.0',()=>console.log('LoyaltyFlow API on '+port))).catch(e=>{console.error(e);process.exit(1)});

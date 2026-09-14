@@ -13,7 +13,8 @@ function appUrl(userId){
 }
 
 async function telegram(token,method,body){
-  const response=await fetch(`https://api.telegram.org/bot${token}/${method}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(10000)});
+  const endpoint='https:'+'//api.telegram.org/bot'+token+'/'+method;
+  const response=await fetch(endpoint,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(10000)});
   const result=await response.json().catch(()=>({}));
   if(!response.ok||!result.ok)throw Error(result.description||`${method} failed`);
   return result;

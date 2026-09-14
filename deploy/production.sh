@@ -3,6 +3,7 @@ set -Eeuo pipefail
 cd /opt/loyaltyflow
 export DEBIAN_FRONTEND=noninteractive
 DOMAIN=31.77.207.38.nip.io
+SCHEME=https
 
 apt-get update
 apt-get install -y git curl openssl nginx docker.io certbot python3-certbot-nginx
@@ -23,7 +24,7 @@ if [ ! -f .env ]; then
 POSTGRES_PASSWORD=$(openssl rand -hex 24)
 SYNC_SECRET=$(openssl rand -hex 32)
 BUSINESS_SLUG=main
-PUBLIC_APP_URL=https://${DOMAIN}/miniapp.html?tenant=main
+PUBLIC_APP_URL=${SCHEME}://${DOMAIN}/miniapp.html?tenant=main
 TELEGRAM_BOT_TOKEN=
 ENV
   chmod 600 .env
@@ -56,7 +57,7 @@ server {
   listen [::]:80 default_server;
   server_name ${DOMAIN} 1977072.hosted-by.xorek.cloud 31.77.207.38 _;
   location /.well-known/acme-challenge/ { root /opt/loyaltyflow; }
-  return 301 https://${DOMAIN}\$request_uri;
+  return 301 ${SCHEME}://${DOMAIN}\$request_uri;
 }
 server {
   listen 443 ssl http2;
@@ -79,10 +80,10 @@ nginx -t
 systemctl reload nginx
 sleep 5
 curl -fsS http://127.0.0.1:3000/api/health
-curl -kfsS --resolve "${DOMAIN}:443:127.0.0.1" "https://${DOMAIN}/api/health"
+curl -kfsS --resolve "${DOMAIN}:443:127.0.0.1" "${SCHEME}://${DOMAIN}/api/health"
 echo
 SYNC=$(grep '^SYNC_SECRET=' .env | cut -d= -f2-)
-echo "Admin: https://${DOMAIN}/"
-echo "Mini App: https://${DOMAIN}/miniapp.html?tenant=main"
-echo "Sync URL: https://${DOMAIN}/api/v1/sync/${SYNC}"
+echo "Admin: ${SCHEME}://${DOMAIN}/"
+echo "Mini App: ${SCHEME}://${DOMAIN}/miniapp.html?tenant=main"
+echo "Sync URL: ${SCHEME}://${DOMAIN}/api/v1/sync/${SYNC}"
 echo "To enable Telegram: edit TELEGRAM_BOT_TOKEN in /opt/loyaltyflow/.env, then run ${COMPOSE[*]} up -d --build api"

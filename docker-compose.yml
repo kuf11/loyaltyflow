@@ -49,7 +49,7 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       BOT_TOKEN_ENCRYPTION_KEY: ${BOT_TOKEN_ENCRYPTION_KEY:?BOT_TOKEN_ENCRYPTION_KEY is required}
       PUBLIC_APP_URL: ${PUBLIC_APP_URL}
-      BOT_MENU_SYNC_INTERVAL_MS: ${BOT_MENU_SYNC_INTERVAL_MS:-300000}
+      BOT_MENU_SYNC_INTERVAL_MS: ${BOT_MENU_SYNC_INTERVAL_MS:-60000}
     depends_on:
       db: {condition: service_healthy}
       api: {condition: service_started}

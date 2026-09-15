@@ -1,8 +1,10 @@
 import crypto from 'node:crypto';
+import {isLoginCaptchaVerified} from './login-security-context.js';
+const production=String(process.env.NODE_ENV||'').toLowerCase()==='production';
 export const hash=value=>crypto.createHash('sha256').update(String(value)).digest('hex');
 export const b64=value=>Buffer.from(value).toString('base64url');
 export function passwordHash(password){const salt=crypto.randomBytes(16).toString('hex');return `${salt}:${crypto.scryptSync(password,salt,64).toString('hex')}`}
-export function passwordOk(password,stored){try{const [salt,value,...extra]=String(stored||'').split(':');if(!salt||!value||extra.length)return false;const actual=crypto.scryptSync(password,salt,64),expected=Buffer.from(value,'hex');return actual.length===expected.length&&crypto.timingSafeEqual(actual,expected)}catch{return false}}
+export function passwordOk(password,stored){try{if(production&&!isLoginCaptchaVerified())return false;const [salt,value,...extra]=String(stored||'').split(':');if(!salt||!value||extra.length)return false;const actual=crypto.scryptSync(password,salt,64),expected=Buffer.from(value,'hex');return actual.length===expected.length&&crypto.timingSafeEqual(actual,expected)}catch{return false}}
 function requireSecret(secret,name){if(!secret)throw new Error(`${name} is required`);return secret}
 export function signSession(user,secret,ttlMs=86_400_000,now=Date.now()){requireSecret(secret,'JWT_SECRET');const body=b64(JSON.stringify({id:user.id,email:user.email,exp:now+ttlMs}));return `${body}.${b64(crypto.createHmac('sha256',secret).update(body).digest())}`}
 export function verifySession(token,secret,now=Date.now()){try{requireSecret(secret,'JWT_SECRET');const parts=String(token||'').split('.');if(parts.length!==2)return null;const [body,signature]=parts,actual=Buffer.from(signature,'base64url'),expected=crypto.createHmac('sha256',secret).update(body).digest();if(actual.length!==expected.length||!crypto.timingSafeEqual(actual,expected))return null;const data=JSON.parse(Buffer.from(body,'base64url').toString('utf8'));return data?.id&&Number.isFinite(data.exp)&&data.exp>now?data:null}catch{return null}}

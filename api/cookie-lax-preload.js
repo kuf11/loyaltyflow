@@ -1,0 +1,1 @@
+import http from 'node:http';const original=http.ServerResponse.prototype.setHeader;http.ServerResponse.prototype.setHeader=function(name,value){if(String(name).toLowerCase()==='set-cookie'){const patch=item=>String(item).replace(/SameSite=Strict/gi,'SameSite=Lax');value=Array.isArray(value)?value.map(patch):patch(value)}return original.call(this,name,value)};

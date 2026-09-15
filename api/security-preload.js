@@ -1,8 +1,7 @@
 import express from 'express';
-const originalPost=express.application.post;
-express.application.post=function(path,...handlers){
-  if(path==='/api/v1/public/:tenant/loyalty/purchase'){
-    return originalPost.call(this,path,(req,res)=>res.status(503).json({error:'Оплата временно отключена до подключения проверенной платёжной системы'}));
-  }
-  return originalPost.call(this,path,...handlers);
-};
+const originalPost=express.application.post,originalListen=express.application.listen;
+function cookieToken(req){const match=String(req.headers.cookie||'').match(/(?:^|;\s*)lf_session=([^;]+)/);try{return match?decodeURIComponent(match[1]):''}catch{return''}}
+function requestSecurity(req,res,next){if(!req.headers.authorization){const token=cookieToken(req);if(token)req.headers.authorization='Bearer '+token}res.setHeader('Cache-Control','no-store');next()}
+function sessionCookie(req,token){const secure=req.secure||String(req.get('x-forwarded-proto')||'').split(',')[0].trim()==='https';return `lf_session=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400${secure?'; Secure':''}`}
+express.application.post=function(path,...handlers){if(path==='/api/v1/public/:tenant/loyalty/purchase')return originalPost.call(this,path,requestSecurity,(req,res)=>res.status(503).json({error:'Оплата отключена до подключения проверенной платёжной системы'}));if(path==='/api/v1/sync/:secret')return originalPost.call(this,path,(req,res)=>res.status(410).json({error:'Передача секрета в URL отключена. Используйте защищённый служебный endpoint.'}));if(path==='/api/v1/auth/login'){const issueCookie=(req,res,next)=>{const send=res.json.bind(res);res.json=body=>{if(body?.token)res.setHeader('Set-Cookie',sessionCookie(req,body.token));return send(body)};next()};return originalPost.call(this,path,requestSecurity,issueCookie,...handlers)}return originalPost.call(this,path,requestSecurity,...handlers)};
+express.application.listen=function(...args){this.set('trust proxy','loopback');this.disable('x-powered-by');if(!this.__secureLogoutInstalled){this.__secureLogoutInstalled=true;originalPost.call(this,'/api/v1/auth/logout',(req,res)=>{const secure=req.secure||String(req.get('x-forwarded-proto')||'').split(',')[0].trim()==='https';res.setHeader('Set-Cookie',`lf_session=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${secure?'; Secure':''}`);res.setHeader('Cache-Control','no-store');res.json({ok:true})})}return originalListen.apply(this,args)};

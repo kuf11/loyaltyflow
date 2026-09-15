@@ -28,7 +28,7 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-}
       ADMIN_KEY: ${ADMIN_KEY}
       JWT_SECRET: ${JWT_SECRET}
-      BOT_TOKEN_ENCRYPTION_KEY: ${BOT_TOKEN_ENCRYPTION_KEY:-}
+      BOT_TOKEN_ENCRYPTION_KEY: ${BOT_TOKEN_ENCRYPTION_KEY:?BOT_TOKEN_ENCRYPTION_KEY is required}
       TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:-}
       TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}
       ALLOW_DEV_CAPTCHA: ${ALLOW_DEV_CAPTCHA:-false}
@@ -37,55 +37,49 @@ services:
       ALLOW_DEV_EMAIL_CODE: ${ALLOW_DEV_EMAIL_CODE:-false}
       AUTO_APPROVE_REGISTRATIONS: ${AUTO_APPROVE_REGISTRATIONS:-false}
     depends_on:
-      db:
-        condition: service_healthy
-    ports:
-      - "127.0.0.1:3100:3000"
+      db: {condition: service_healthy}
+    ports: ["127.0.0.1:3100:3000"]
   bot-menu-sync:
     build: ./api
     restart: unless-stopped
     command: ["node","bot-menu-sync.js"]
     environment:
+      NODE_ENV: production
       DATABASE_URL: postgresql://loyaltyflow:${POSTGRES_PASSWORD}@db:5432/loyaltyflow
       JWT_SECRET: ${JWT_SECRET}
-      BOT_TOKEN_ENCRYPTION_KEY: ${BOT_TOKEN_ENCRYPTION_KEY:-}
+      BOT_TOKEN_ENCRYPTION_KEY: ${BOT_TOKEN_ENCRYPTION_KEY:?BOT_TOKEN_ENCRYPTION_KEY is required}
       PUBLIC_APP_URL: ${PUBLIC_APP_URL}
       BOT_MENU_SYNC_INTERVAL_MS: ${BOT_MENU_SYNC_INTERVAL_MS:-300000}
     depends_on:
-      db:
-        condition: service_healthy
-      api:
-        condition: service_started
+      db: {condition: service_healthy}
+      api: {condition: service_started}
   admin-api:
     build: ./api
     restart: unless-stopped
     command: ["node","--import","./admin-security-preload.js","--import","./schedule-api-preload.js","admin-broadcast-server.js"]
     environment:
+      NODE_ENV: production
       ADMIN_API_PORT: 3001
       DATABASE_URL: postgresql://loyaltyflow:${POSTGRES_PASSWORD}@db:5432/loyaltyflow
       JWT_SECRET: ${JWT_SECRET}
-      BOT_TOKEN_ENCRYPTION_KEY: ${BOT_TOKEN_ENCRYPTION_KEY:-}
+      BOT_TOKEN_ENCRYPTION_KEY: ${BOT_TOKEN_ENCRYPTION_KEY:?BOT_TOKEN_ENCRYPTION_KEY is required}
       PUBLIC_APP_URL: ${PUBLIC_APP_URL}
       PLATFORM_ADMIN_EMAILS: ${PLATFORM_ADMIN_EMAILS:?PLATFORM_ADMIN_EMAILS is required}
     depends_on:
-      db:
-        condition: service_healthy
-      api:
-        condition: service_started
-    ports:
-      - "127.0.0.1:3101:3001"
+      db: {condition: service_healthy}
+      api: {condition: service_started}
+    ports: ["127.0.0.1:3101:3001"]
   broadcast-scheduler:
     build: ./api
     restart: unless-stopped
     command: ["node","broadcast-scheduler.js"]
     environment:
+      NODE_ENV: production
       DATABASE_URL: postgresql://loyaltyflow:${POSTGRES_PASSWORD}@db:5432/loyaltyflow
       JWT_SECRET: ${JWT_SECRET}
-      BOT_TOKEN_ENCRYPTION_KEY: ${BOT_TOKEN_ENCRYPTION_KEY:-}
+      BOT_TOKEN_ENCRYPTION_KEY: ${BOT_TOKEN_ENCRYPTION_KEY:?BOT_TOKEN_ENCRYPTION_KEY is required}
     depends_on:
-      db:
-        condition: service_healthy
-      admin-api:
-        condition: service_started
+      db: {condition: service_healthy}
+      admin-api: {condition: service_started}
 volumes:
   postgres_data:

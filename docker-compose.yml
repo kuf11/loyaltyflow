@@ -18,9 +18,9 @@ services:
     build: ./api
     restart: unless-stopped
     environment:
+      NODE_ENV: production
       PORT: 3000
       DATABASE_URL: postgresql://loyaltyflow:${POSTGRES_PASSWORD}@db:5432/loyaltyflow
-      BUSINESS_SLUG: ${BUSINESS_SLUG:-main}
       SYNC_SECRET: ${SYNC_SECRET}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       PUBLIC_APP_URL: ${PUBLIC_APP_URL}
@@ -35,52 +35,46 @@ services:
       ALLOW_DEV_EMAIL_CODE: ${ALLOW_DEV_EMAIL_CODE:-false}
       AUTO_APPROVE_REGISTRATIONS: ${AUTO_APPROVE_REGISTRATIONS:-false}
     depends_on:
-      db:
-        condition: service_healthy
-    ports:
-      - "127.0.0.1:3100:3000"
+      db: {condition: service_healthy}
+    ports: ["127.0.0.1:3100:3000"]
   bot-menu-sync:
     build: ./api
     restart: unless-stopped
     command: ["node","bot-menu-sync.js"]
     environment:
+      NODE_ENV: production
       DATABASE_URL: postgresql://loyaltyflow:${POSTGRES_PASSWORD}@db:5432/loyaltyflow
       JWT_SECRET: ${JWT_SECRET}
       PUBLIC_APP_URL: ${PUBLIC_APP_URL}
       BOT_MENU_SYNC_INTERVAL_MS: ${BOT_MENU_SYNC_INTERVAL_MS:-300000}
     depends_on:
-      db:
-        condition: service_healthy
-      api:
-        condition: service_started
+      db: {condition: service_healthy}
+      api: {condition: service_started}
   admin-api:
     build: ./api
     restart: unless-stopped
-    command: ["node","--import","./schedule-api-preload.js","admin-broadcast-server.js"]
+    command: ["node","--import","./security-preload.js","--import","./schedule-api-preload.js","admin-broadcast-server.js"]
     environment:
+      NODE_ENV: production
       ADMIN_API_PORT: 3001
       DATABASE_URL: postgresql://loyaltyflow:${POSTGRES_PASSWORD}@db:5432/loyaltyflow
       JWT_SECRET: ${JWT_SECRET}
       PUBLIC_APP_URL: ${PUBLIC_APP_URL}
-      PLATFORM_ADMIN_EMAILS: ${PLATFORM_ADMIN_EMAILS:-kuf454647@gmail.com}
+      PLATFORM_ADMIN_EMAILS: ${PLATFORM_ADMIN_EMAILS:-}
     depends_on:
-      db:
-        condition: service_healthy
-      api:
-        condition: service_started
-    ports:
-      - "127.0.0.1:3101:3001"
+      db: {condition: service_healthy}
+      api: {condition: service_started}
+    ports: ["127.0.0.1:3101:3001"]
   broadcast-scheduler:
     build: ./api
     restart: unless-stopped
     command: ["node","broadcast-scheduler.js"]
     environment:
+      NODE_ENV: production
       DATABASE_URL: postgresql://loyaltyflow:${POSTGRES_PASSWORD}@db:5432/loyaltyflow
       JWT_SECRET: ${JWT_SECRET}
     depends_on:
-      db:
-        condition: service_healthy
-      admin-api:
-        condition: service_started
+      db: {condition: service_healthy}
+      admin-api: {condition: service_started}
 volumes:
   postgres_data:

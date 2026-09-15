@@ -1,90 +1,207 @@
 # LoyaltyFlow
 
-LoyaltyFlow — SaaS-платформа программы лояльности с кабинетом владельца, Telegram-ботом, Telegram Mini App, каталогом товаров, бонусами, клиентами, аналитикой и рассылками.
+LoyaltyFlow — SaaS-платформа программы лояльности: кабинет владельца, Telegram-бот, Telegram Mini App, каталог, бонусы, клиенты, аналитика и рассылки.
 
-## Важно: актуальная production-ветка
+## Production
 
-Production сейчас обновляется из ветки:
+- Репозиторий: `kuf11/loyaltyflow`.
+- Активная ветка: `backup/pre-glass-redesign-20260915`.
+- Каталог сервера: `/opt/loyaltyflow`.
+- Публичный адрес: `https://31.77.207.38.nip.io`.
+- `main` не использовать: там отменённый glass-redesign.
+- Точные команды и правила для агентов: `AGENTS.md`.
+
+## Архитектура runtime
 
 ```text
-backup/pre-glass-redesign-20260915
+Browser / Telegram
+        |
+   HTTPS Nginx (systemd, root=/opt/loyaltyflow)
+        |-- static HTML/CSS/JS
+        `-- /api/* -> 127.0.0.1:3100
+                         |
+                    Docker API
+                         |
+                    PostgreSQL
 ```
 
-Не использовать `git pull main`: ветка `main` содержит отменённый glass-redesign. Точная инструкция обновления находится в `AGENTS.md`.
+Admin API слушает только `127.0.0.1:3101`. Публичные API-порты наружу не открывать.
 
-## Карта проекта
+## Публичная главная и авторизация
 
-### Кабинет владельца
+| Страница | Активные файлы | Назначение |
+|---|---|---|
+| `/auth.html` | `auth-v2.css`, `auth-app.js`, `auth-actions.js`, `registration-ui-fixes.css`, `auth-runtime-fixes.css` | Главная, встроенная регистрация и вход |
+| `/register.html` | `auth-pages.css`, `registration-ui-fixes.css`, `auth-runtime-fixes.css`, `register-page.js` | Отдельная регистрация |
+| `/login.html` | `auth-pages.css`, `auth-runtime-fixes.css`, `auth-page.js` | Отдельный вход |
 
-- `index.html` — основной кабинет: дашборд, настройка Mini App, клиенты и настройки.
-- `admin.js` — загрузка состояния кабинета, навигация, настройки Mini App и предпросмотр.
-- `admin.css`, `ui-fixes.css` — основные стили кабинета.
-- `admin-save-fix.js` — актуальные исправления сохранения, статуса запуска и закрепления предпросмотра.
-- `clients-dashboard.js` — список клиентов и операции с выбранным клиентом.
-- `catalog-admin.html`, `catalog-admin.js` — ассортимент, остатки, импорт/экспорт Excel.
+Регистрация на главной и отдельная регистрация используют один UI телефона на `intl-tel-input@29.2.3`:
+
+- определение страны по locale;
+- флаг и международный код;
+- поиск страны;
+- форматирование во время ввода;
+- проверка номера;
+- отправка номера в международном формате.
+
+Turnstile применяется серверно и клиентски. Actions должны совпадать с backend: `register` для регистрации, `login` для входа. На узких экранах виджеты используют flexible size. `auth-runtime-fixes.css` отвечает за зазор между password и CAPTCHA и за отсутствие mobile overflow.
+
+## Кабинет владельца
+
+Точка входа: `index.html`.
+
+- `admin.js` — профиль, навигация, конфигурация Mini App, предпросмотр.
+- `admin.css`, `ui-fixes.css` — стили кабинета.
+- `admin-save-fix.js` — актуальные исправления сохранения и статуса запуска.
+- `clients-dashboard.js` — клиентская база.
+- `catalog-admin.html`, `catalog-admin.js` — ассортимент, остатки, XLSX/XLS.
 - `analytics.html`, `analytics-dashboard.js`, `loyalty-analytics.js` — аналитика.
-- `loyalty-admin.html`, `loyalty-admin.js` — настройки программы лояльности.
-- `broadcasts.html`, `broadcasts.js`, `broadcast-default-link.js`, `broadcast-edit-fix-v2.js` — создание, расписание и редактирование рассылок.
+- `loyalty-admin.html`, `loyalty-admin.js` — настройки бонусной программы.
+- `broadcasts.html`, `broadcasts.js`, `broadcast-default-link.js`, `broadcast-edit-fix-v2.js` — рассылки.
 - `platform-admin.html`, `platform-admin.js` — управление пользователями платформы.
 
-### Telegram Mini App
+Товары хранятся в `users.miniapp_design.products`. Основные поля: `id`, `name`, `category`, `price`, `bonus`, `stock`, `image`.
 
-Точка входа — `miniapp.html`. Порядок скриптов важен: более поздние файлы дополняют или исправляют ранний runtime.
+## Telegram Mini App
 
-- `miniapp-fast-start.js` — быстрый первый экран.
-- `miniapp-v11.js` — базовое приложение, каталог, корзина и навигация.
-- `miniapp-v12.js` — улучшения карточек и модальных окон.
-- `miniapp-v13.js` — серверная программа лояльности и регистрация по телефону.
-- `miniapp-payment-errors.js` — сообщения об ошибках оплаты.
-- `miniapp-qr.js` — QR-код.
-- `miniapp-registration-theme.js` — тема регистрации.
-- `miniapp-stock-fix-v2.js` — клиентские ограничения по остаткам; должен загружаться после основных Mini App-скриптов.
-- `miniapp-search-ui-fix.js` — живой поиск и финальная верстка блока популярных товаров; загружается последним.
-- `miniapp-v11.css` … `miniapp-v15.css`, `miniapp-phone.css`, `miniapp-fixes.css` — стили приложения.
+Точка входа: `miniapp.html`.
 
-При изменении порядка скриптов обязательно повторно проверить поиск, остатки, корзину, регистрацию и оплату.
+### Активный порядок CSS
 
-### Backend
+1. `miniapp-v11.css`
+2. `miniapp-v12.css`
+3. `miniapp-v13.css`
+4. `miniapp-v14.css`
+5. `miniapp-v15.css`
+6. `miniapp-phone.css`
+7. `miniapp-fixes.css`
 
-Каталог `api/`:
+### Активный порядок JavaScript
 
-- `server.js` — основной Express API, авторизация, профиль и конфигурация Mini App.
-- `loyalty.js` — клиенты, бонусы, покупки и транзакции.
-- `security.js`, `security-preload.js`, `registration-security.js` — безопасность и ограничения регистрации/оплаты.
-- `admin-broadcast-server.js` — API рассылок.
-- `broadcast-scheduler.js`, `schedule-api-preload.js` — расписание и редактирование отложенных рассылок.
-- `bot-menu-sync.js` — синхронизация кнопки запуска Mini App в Telegram.
-- `init.sql` — начальная схема PostgreSQL.
-- `Dockerfile`, `package.json` — сборка API.
+1. `miniapp-fast-start.js`
+2. Telegram WebApp SDK
+3. `miniapp-v11.js`
+4. `miniapp-v12.js`
+5. `miniapp-v13.js`
+6. `miniapp-payment-errors.js`
+7. QRCode library
+8. `miniapp-qr.js`
+9. `miniapp-registration-theme.js`
+10. `miniapp-stock-fix-v2.js`
+11. `miniapp-search-ui-fix.js`
+12. `miniapp-security.js`
 
-`security-preload.js` сейчас намеренно отключает endpoint оплаты до подключения проверенной платёжной системы. Не удалять это ограничение без отдельного решения по платежам.
+Поздние файлы исправляют ранний runtime, поэтому порядок нельзя менять без полного regression-теста. `miniapp.js`, `miniapp-v9.js` и `miniapp-stock-flags-fix.js` текущей страницей не загружаются.
 
-### Инфраструктура
+## Backend (`api/`)
 
-- `docker-compose.yml` — API, PostgreSQL и связанные сервисы.
-- `deploy/` — конфигурация production-развёртывания.
-- Production-каталог: `/opt/loyaltyflow`.
-- Production-хост: `31.77.207.38.nip.io`.
+| Файл | Ответственность |
+|---|---|
+| `server.js` | Express API, auth, профиль, public config, Mini App config |
+| `loyalty.js` | Клиенты, бонусы, покупки и транзакции |
+| `security.js` | Пароли, сессии, AES-GCM, origin и Telegram initData |
+| `login-security-context.js` | Verified login context; блокирует обход CAPTCHA прямым запуском server.js |
+| `security-preload.js` | Login CAPTCHA, verify rate limit и временное отключение оплаты |
+| `registration-security.js` | Turnstile Siteverify, hostname/action, production guards |
+| `test-mode-setup.js` | Запрет dev-флагов в production |
+| `admin-security-preload.js` | Авторизация admin API |
+| `admin-broadcast-server.js` | API рассылок |
+| `broadcast-scheduler.js` | Исполнение расписания рассылок |
+| `schedule-api-preload.js` | API операций расписания |
+| `bot-menu-sync.js` | Синхронизация кнопки запуска Mini App |
+| `init.sql` | Начальная схема PostgreSQL |
+| `Dockerfile`, `package.json` | Сборка и проверки API |
 
-## Данные каталога
+Backend использует файл `api/schedule-api-preload.js`. Одноимённый файл в корне не является импортом API-контейнера.
 
-Товары хранятся в `users.miniapp_design.products`. Основные поля:
+## Docker и Nginx
 
-```text
-id, name, category, price, bonus, stock, image
-```
+`docker-compose.yml` содержит:
 
-Excel-импорт находится в `catalog-admin.js`. Он принимает XLSX/XLS, проверяет строки и обновляет совпадения по паре `название + категория`.
+- `db` — PostgreSQL 16;
+- `api` — основной API;
+- `bot-menu-sync`;
+- `admin-api`;
+- `broadcast-scheduler`.
 
-## Минимальные проверки перед коммитом
+Nginx в compose отсутствует. Это системный сервис. Статические файлы читаются прямо из checkout, поэтому после frontend-изменений Docker не пересобирается.
+
+`deploy/production.sh`:
+
+- обновляет разрешённую ветку;
+- поднимает контейнеры;
+- настраивает TLS/Nginx;
+- проксирует `/api/`;
+- блокирует `.env`, `.git`, deployment и конфигурационные файлы;
+- проверяет API health.
+
+## Security baseline
+
+- API: `127.0.0.1:3100`.
+- Admin API: `127.0.0.1:3101`.
+- Login и registration защищены Turnstile.
+- Backend проверяет Turnstile hostname и action.
+- Login fail-closed через `login-security-context.js`.
+- Verification attempts ограничены по IP и email.
+- Dev CAPTCHA/email code/auto-approve запрещены в production.
+- Bot tokens шифруются отдельным `BOT_TOKEN_ENCRYPTION_KEY`.
+- Endpoint оплаты намеренно возвращает `503` до подключения проверенного провайдера.
+
+Не публиковать `TURNSTILE_SECRET_KEY`, `JWT_SECRET`, `ADMIN_KEY`, `BOT_TOKEN_ENCRYPTION_KEY`, `POSTGRES_PASSWORD` и Telegram tokens.
+
+## Проверка frontend
 
 ```bash
-node --check изменённый-файл.js
-cd api && npm test
+node --check auth-app.js
+node --check auth-page.js
+node --check register-page.js
+node --check miniapp-search-ui-fix.js
 ```
 
-Для UI дополнительно проверить desktop/mobile, отсутствие горизонтального overflow и фактическое поведение внутри Telegram Mini App.
+Обязательные ручные размеры: 320, 360, 390, 430, 768 и desktop. Проверить overflow, dropdown страны, экранную клавиатуру, CAPTCHA, submit, сообщения ошибок и повторное открытие Telegram Mini App.
+
+## Проверка backend
+
+```bash
+cd api
+npm test
+npm run check
+```
+
+Health:
+
+```bash
+curl -fsS http://127.0.0.1:3100/api/health
+```
 
 ## Обновление production
 
-Не придумывать команды и не использовать SSH: пользователь уже находится на сервере. Следовать разделу «Обновление production-сервера» в `AGENTS.md`.
+Frontend/документация:
+
+```bash
+cd /opt/loyaltyflow
+git fetch origin refs/heads/backup/pre-glass-redesign-20260915
+git reset --hard FETCH_HEAD
+git log -1 --oneline
+nginx -t
+systemctl reload nginx
+```
+
+Backend:
+
+```bash
+cd /opt/loyaltyflow
+git fetch origin refs/heads/backup/pre-glass-redesign-20260915
+git reset --hard FETCH_HEAD
+docker compose up -d --build
+docker compose ps
+curl -fsS http://127.0.0.1:3100/api/health
+```
+
+## Известные ограничения
+
+- `package-lock.json` пока отсутствует.
+- Реальная отправка email требует `RESEND_API_KEY` и `EMAIL_FROM`.
+- Глобальная legacy CSP пока содержит `unsafe-inline`.
+- `intl-tel-input` и QRCode загружаются с CDN.
+- Оплата отключена намеренно.

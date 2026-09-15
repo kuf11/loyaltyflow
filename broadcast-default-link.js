@@ -104,5 +104,23 @@
 
   day.addEventListener('input',syncSchedule);
   time.addEventListener('input',syncSchedule);
+
+  const send=document.getElementById('sendBroadcast');
+  send?.addEventListener('click',event=>{
+    if(type.value==='now')return;
+    syncSchedule();
+    const plannedAt=new Date(dateValue.value+':00+03:00');
+    if(dateValue.value&&Number.isFinite(plannedAt.getTime())&&plannedAt.getTime()>Date.now())return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const status=document.getElementById('broadcastStatus');
+    if(status){
+      status.hidden=false;
+      status.classList.add('error');
+      status.textContent='Введите будущее время по МСК';
+    }
+    time.focus();
+  },true);
+
   syncSchedule();
 })();

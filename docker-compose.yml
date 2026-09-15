@@ -18,6 +18,7 @@ services:
     build: ./api
     restart: unless-stopped
     environment:
+      NODE_ENV: production
       PORT: 3000
       DATABASE_URL: postgresql://loyaltyflow:${POSTGRES_PASSWORD}@db:5432/loyaltyflow
       BUSINESS_SLUG: ${BUSINESS_SLUG:-main}

@@ -2,20 +2,33 @@ import express from 'express';
 import rateLimit from 'express-rate-limit';
 import {verifyRegistrationCaptcha} from './registration-security.js';
 import {loginSecurityContext} from './login-security-context.js';
+
 const originalInit=express.application.init;
-express.application.init=function(...args){const result=originalInit.apply(this,args);this.set('trust proxy',1);return result};
-const loginCaptcha=async(req,res,next)=>{try{if(!await verifyRegistrationCaptcha(req.body?.turnstileToken,req.ip,'login'))return res.status(400).json({error:'Проверка безопасности не пройдена. Обновите страницу и попробуйте снова.'});loginSecurityContext.run(true,()=>next())}catch(error){console.error(error);res.status(Number(error.status)||500).json({error:error.message||'Не удалось выполнить проверку безопасности'})}};
-const verifyAccountLimit=rateLimit({windowMs:15*60*1000,limit:8,standardHeaders:true,legacyHeaders:false,skipSuccessfulRequests:true,keyGenerator:req=>String(req.body?.email||'').trim().toLowerCase().slice(0,320)||'missing-email',message:{error:'Слишком много неверных кодов для этого аккаунта. Попробуйте позже.'}});
 const originalPost=express.application.post;
+const originalListen=express.application.listen;
+
+function cookieToken(req){const match=String(req.headers.cookie||'').match(/(?:^|;\s*)lf_session=([^;]+)/);try{return match?decodeURIComponent(match[1]):''}catch{return''}}
+function secureCookie(req,token,maxAge=86400){const secure=req.secure||String(req.get('x-forwarded-proto')||'').split(',')[0].trim()==='https';return `lf_session=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${secure?'; Secure':''}`}
+function requestSecurity(req,res,next){if(!req.headers.authorization){const token=cookieToken(req);if(token)req.headers.authorization='Bearer '+token}if(req.path.startsWith('/api/v1/auth/'))res.setHeader('Cache-Control','no-store');next()}
+express.application.init=function(...args){const result=originalInit.apply(this,args);this.set('trust proxy','loopback');this.disable('x-powered-by');this.use(requestSecurity);return result};
+
+const bad=(res,message)=>res.status(400).json({error:message});
+function validateRegistration(req,res,next){const body=req.body||{},fullName=String(body.fullName||'').trim().replace(/\s+/g,' '),company=String(body.company||'').trim().replace(/\s+/g,' '),city=String(body.city||'').trim().replace(/\s+/g,' '),email=String(body.email||'').trim().toLowerCase(),phone=String(body.phone||'').trim(),password=String(body.password||''),age=Number(body.age);if(fullName.length<2||fullName.length>120)return bad(res,'Имя должно содержать от 2 до 120 символов');if(company.length<2||company.length>120)return bad(res,'Название компании должно содержать от 2 до 120 символов');if(city.length<2||city.length>80)return bad(res,'Название города должно содержать от 2 до 80 символов');if(!/^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,63}$/.test(email)||email.length>254)return bad(res,'Введите корректный email');if(!/^\+[1-9]\d{7,14}$/.test(phone))return bad(res,'Введите телефон в международном формате');if(!Number.isInteger(age)||age<14||age>100)return bad(res,'Укажите возраст от 14 до 100 лет');if(password.length<8||password.length>128)return bad(res,'Пароль должен содержать от 8 до 128 символов');req.body={...body,fullName,company,city,email,phone,password,age};next()}
+function validateLogin(req,res,next){const email=String(req.body?.email||'').trim().toLowerCase(),password=String(req.body?.password||'');if(email.length>254||password.length>128)return bad(res,'Неверный email или пароль');req.body={...(req.body||{}),email,password};next()}
+function validateCode(req,res,next){const email=String(req.body?.email||'').trim().toLowerCase(),code=String(req.body?.code||'');if(email.length>254||!/^[0-9]{6}$/.test(code))return bad(res,'Неверный или просроченный код');req.body={...(req.body||{}),email,code};next()}
+const loginCaptcha=async(req,res,next)=>{try{if(!await verifyRegistrationCaptcha(req.body?.turnstileToken,req.ip,'login'))return res.status(400).json({error:'Проверка безопасности не пройдена. Обновите страницу и попробуйте снова.'});loginSecurityContext.run(true,()=>next())}catch(error){console.error(error);res.status(Number(error.status)||500).json({error:'Не удалось выполнить проверку безопасности'})}};
+const verifyAccountLimit=rateLimit({windowMs:15*60*1000,limit:8,standardHeaders:true,legacyHeaders:false,skipSuccessfulRequests:true,keyGenerator:req=>String(req.body?.email||'').trim().toLowerCase().slice(0,320)||'missing-email',message:{error:'Слишком много неверных кодов для этого аккаунта. Попробуйте позже.'}});
+function issueCookie(req,res,next){const send=res.json.bind(res);res.json=body=>{if(body?.token)res.setHeader('Set-Cookie',secureCookie(req,body.token));return send(body)};next()}
+
 express.application.post=function(path,...handlers){
   if(path==='/api/v1/public/:tenant/loyalty/purchase')return originalPost.call(this,path,(req,res)=>res.status(503).json({error:'Оплата временно отключена до подключения проверенной платёжной системы'}));
-  if(path==='/api/v1/auth/login'){
-    const [rateLimitByIp,...rest]=handlers;
-    return originalPost.call(this,path,rateLimitByIp,loginCaptcha,...rest);
+  if(path==='/api/v1/sync/:secret'){
+    originalPost.call(this,'/api/v1/sync',(req,res,next)=>{req.params.secret=String(req.get('X-Sync-Secret')||'');next()},...handlers);
+    return originalPost.call(this,path,(req,res)=>res.status(410).json({error:'Передача секрета в URL отключена'}));
   }
-  if(path==='/api/v1/auth/verify'){
-    const [rateLimitByIp,...rest]=handlers;
-    return originalPost.call(this,path,rateLimitByIp,verifyAccountLimit,...rest);
-  }
+  if(path==='/api/v1/auth/register'){const [byIp,...rest]=handlers;return originalPost.call(this,path,byIp,validateRegistration,...rest)}
+  if(path==='/api/v1/auth/login'){const [byIp,...rest]=handlers;return originalPost.call(this,path,byIp,validateLogin,loginCaptcha,issueCookie,...rest)}
+  if(path==='/api/v1/auth/verify'){const [byIp,...rest]=handlers;return originalPost.call(this,path,byIp,validateCode,verifyAccountLimit,...rest)}
   return originalPost.call(this,path,...handlers);
 };
+express.application.listen=function(...args){if(!this.__secureLogoutInstalled){this.__secureLogoutInstalled=true;originalPost.call(this,'/api/v1/auth/logout',(req,res)=>{res.setHeader('Set-Cookie',secureCookie(req,'',0));res.setHeader('Cache-Control','no-store');res.json({ok:true})})}return originalListen.apply(this,args)};

@@ -56,7 +56,7 @@ services:
   admin-api:
     build: ./api
     restart: unless-stopped
-    command: ["node","--import","./admin-security-preload.js","--import","./schedule-api-preload.js","admin-broadcast-server.js"]
+    command: ["node","--import","./admin-security-preload.js","--import","./schedule-api-preload.js","--import","./immediate-broadcast-queue-preload.js","admin-broadcast-server.js"]
     environment:
       NODE_ENV: production
       ADMIN_API_PORT: 3001

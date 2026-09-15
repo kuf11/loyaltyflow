@@ -39,8 +39,8 @@ server {
  server_name ${DOMAIN} 1977072.hosted-by.xorek.cloud 31.77.207.38 _;
  root /opt/loyaltyflow;
  location /.well-known/acme-challenge/ { try_files \$uri =404; }
- location /api/ { proxy_pass http://127.0.0.1:${API_PORT}/api/; proxy_set_header Host \$host; proxy_set_header X-Forwarded-Proto \$scheme; proxy_set_header X-Real-IP \$remote_addr; }
- location /admin-api/ { proxy_pass http://127.0.0.1:${ADMIN_API_PORT}/admin-api/; proxy_set_header Host \$host; proxy_set_header X-Forwarded-Proto \$scheme; proxy_set_header X-Real-IP \$remote_addr; }
+ location /api/ { proxy_pass http://127.0.0.1:${API_PORT}/api/; proxy_set_header Host \$host; proxy_set_header X-Forwarded-Proto \$scheme; proxy_set_header X-Real-IP \$remote_addr; proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for; }
+ location /admin-api/ { proxy_pass http://127.0.0.1:${ADMIN_API_PORT}/admin-api/; proxy_set_header Host \$host; proxy_set_header X-Forwarded-Proto \$scheme; proxy_set_header X-Real-IP \$remote_addr; proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for; }
  location / { try_files \$uri \$uri/ /index.html; }
 }
 NGINX
@@ -67,8 +67,8 @@ server {
  root /opt/loyaltyflow;
  index index.html;
  client_max_body_size 8m;
- location /api/ { proxy_pass http://127.0.0.1:${API_PORT}/api/; proxy_http_version 1.1; proxy_set_header Host \$host; proxy_set_header X-Forwarded-Proto https; proxy_set_header X-Real-IP \$remote_addr; }
- location /admin-api/ { proxy_pass http://127.0.0.1:${ADMIN_API_PORT}/admin-api/; proxy_http_version 1.1; proxy_set_header Host \$host; proxy_set_header X-Forwarded-Proto https; proxy_set_header X-Real-IP \$remote_addr; }
+ location /api/ { proxy_pass http://127.0.0.1:${API_PORT}/api/; proxy_http_version 1.1; proxy_set_header Host \$host; proxy_set_header X-Forwarded-Proto https; proxy_set_header X-Real-IP \$remote_addr; proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for; }
+ location /admin-api/ { proxy_pass http://127.0.0.1:${ADMIN_API_PORT}/admin-api/; proxy_http_version 1.1; proxy_set_header Host \$host; proxy_set_header X-Forwarded-Proto https; proxy_set_header X-Real-IP \$remote_addr; proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for; }
  location / { try_files \$uri \$uri/ /index.html; }
  add_header X-Content-Type-Options nosniff always;
  add_header Referrer-Policy strict-origin-when-cross-origin always;

@@ -51,9 +51,9 @@ nginx -t; systemctl reload nginx
 sleep 5
 curl -fsS http://127.0.0.1:${API_PORT}/api/health
 curl -fsS http://127.0.0.1:${ADMIN_API_PORT}/admin-api/health
-curl -ksS --resolve "${DOMAIN}:443:127.0.0.1" "${SCHEME}://${DOMAIN}/" | grep -q 'session-cookie.js?v=6'
-curl -ksS --resolve "${DOMAIN}:443:127.0.0.1" "${SCHEME}://${DOMAIN}/" | grep -q 'form-ui.js?v=1'
-curl -ksS --resolve "${DOMAIN}:443:127.0.0.1" "${SCHEME}://${DOMAIN}/session-cookie.js" | grep -q 'pagehide'
-curl -ksS --resolve "${DOMAIN}:443:127.0.0.1" "${SCHEME}://${DOMAIN}/form-ui.js" | grep -q 'lf-password-toggle'
+curl -ksS --resolve "${DOMAIN}:443:127.0.0.1" "${SCHEME}://${DOMAIN}/" | grep -F 'session-cookie.js?v=6' >/dev/null
+curl -ksS --resolve "${DOMAIN}:443:127.0.0.1" "${SCHEME}://${DOMAIN}/" | grep -F 'form-ui.js?v=1' >/dev/null
+curl -ksS --resolve "${DOMAIN}:443:127.0.0.1" "${SCHEME}://${DOMAIN}/session-cookie.js" | grep -F 'pagehide' >/dev/null
+curl -ksS --resolve "${DOMAIN}:443:127.0.0.1" "${SCHEME}://${DOMAIN}/form-ui.js" | grep -F 'lf-password-toggle' >/dev/null
 for path in /.env /.git/config /docker-compose.yml /deploy/production.sh; do code=$(curl -ksS -o /dev/null -w '%{http_code}' --resolve "${DOMAIN}:443:127.0.0.1" "${SCHEME}://${DOMAIN}${path}"); [ "$code" = 403 ] || [ "$code" = 404 ] || { echo "Sensitive path exposed: $path ($code)" >&2; exit 1; }; done
 echo; echo "Deployed branch: ${DEPLOY_BRANCH}"; echo "Commit: $(git rev-parse --short HEAD)"

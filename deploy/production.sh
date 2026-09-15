@@ -19,15 +19,21 @@ POSTGRES_PASSWORD=$(openssl rand -hex 24)
 SYNC_SECRET=$(openssl rand -hex 32)
 ADMIN_KEY=$(openssl rand -hex 24)
 JWT_SECRET=$(openssl rand -hex 48)
+BOT_TOKEN_ENCRYPTION_KEY=$(openssl rand -hex 48)
 BUSINESS_SLUG=main
 PUBLIC_APP_URL=${SCHEME}://${DOMAIN}/miniapp.html?tenant=main
 CORS_ORIGINS=${SCHEME}://${DOMAIN}
+PLATFORM_ADMIN_EMAILS=
 TELEGRAM_BOT_TOKEN=
 RESEND_API_KEY=
 EMAIL_FROM=
+ALLOW_DEV_CAPTCHA=false
 ALLOW_DEV_EMAIL_CODE=false
+AUTO_APPROVE_REGISTRATIONS=false
 ENV
   chmod 600 .env
+else
+  grep -q '^BOT_TOKEN_ENCRYPTION_KEY=' .env || { printf '\nBOT_TOKEN_ENCRYPTION_KEY=%s\n' "$(openssl rand -hex 48)" >>.env; chmod 600 .env; }
 fi
 "${COMPOSE[@]}" up -d --build
 
@@ -40,7 +46,10 @@ server {
   root /opt/loyaltyflow;
   index index.html;
   location /.well-known/acme-challenge/ { try_files \$uri =404; }
-  location /api/ { proxy_pass http://127.0.0.1:${API_PORT}/api/; proxy_set_header Host \$host; proxy_set_header X-Forwarded-Proto \$scheme; proxy_set_header X-Real-IP \$remote_addr; }
+  location ~ /\.(?!well-known) { deny all; }
+  location ^~ /deploy/ { deny all; }
+  location = /docker-compose.yml { deny all; }
+  location /api/ { proxy_pass http://127.0.0.1:${API_PORT}/api/; proxy_set_header Host \$host; proxy_set_header X-Forwarded-Proto \$scheme; proxy_set_header X-Real-IP \$remote_addr; proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for; }
   location / { try_files \$uri \$uri/ /index.html; }
 }
 NGINX
@@ -55,6 +64,7 @@ server {
   listen [::]:80 default_server;
   server_name ${DOMAIN} 1977072.hosted-by.xorek.cloud 31.77.207.38 _;
   location /.well-known/acme-challenge/ { root /opt/loyaltyflow; }
+  location ~ /\.(?!well-known) { deny all; }
   return 301 ${SCHEME}://${DOMAIN}\$request_uri;
 }
 server {
@@ -67,11 +77,17 @@ server {
   ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
   root /opt/loyaltyflow;
   index index.html;
-  client_max_body_size 1m;
-  location /api/ { proxy_pass http://127.0.0.1:${API_PORT}/api/; proxy_http_version 1.1; proxy_set_header Host \$host; proxy_set_header X-Forwarded-Proto https; proxy_set_header X-Real-IP \$remote_addr; }
+  client_max_body_size 8m;
+  location ~ /\.(?!well-known) { deny all; }
+  location ^~ /deploy/ { deny all; }
+  location = /docker-compose.yml { deny all; }
+  location ~* \.(?:sql|sh|md|ya?ml|lock)$ { deny all; }
+  location /api/ { proxy_pass http://127.0.0.1:${API_PORT}/api/; proxy_http_version 1.1; proxy_set_header Host \$host; proxy_set_header X-Forwarded-Proto https; proxy_set_header X-Real-IP \$remote_addr; proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for; }
   location / { try_files \$uri \$uri/ /index.html; }
   add_header X-Content-Type-Options nosniff always;
   add_header Referrer-Policy strict-origin-when-cross-origin always;
+  add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+  add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://telegram.org https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://api.telegram.org; object-src 'none'; base-uri 'self'; frame-ancestors 'self' https://web.telegram.org https://*.telegram.org" always;
 }
 NGINX
 nginx -t
@@ -79,6 +95,7 @@ systemctl reload nginx
 sleep 5
 curl -fsS http://127.0.0.1:${API_PORT}/api/health
 curl -kfsS --resolve "${DOMAIN}:443:127.0.0.1" "${SCHEME}://${DOMAIN}/api/health"
+for path in /.env /.git/config /docker-compose.yml /deploy/production.sh; do code=$(curl -ksS -o /dev/null -w '%{http_code}' --resolve "${DOMAIN}:443:127.0.0.1" "${SCHEME}://${DOMAIN}${path}"); [ "$code" = 403 ] || [ "$code" = 404 ] || { echo "Sensitive path exposed: $path ($code)" >&2; exit 1; }; done
 echo
 echo "Admin: ${SCHEME}://${DOMAIN}/"
 echo "Mini App: ${SCHEME}://${DOMAIN}/miniapp.html?tenant=main"

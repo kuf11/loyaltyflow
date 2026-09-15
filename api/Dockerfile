@@ -7,4 +7,4 @@ RUN npm install --omit=dev --ignore-scripts --save-exact \
 COPY server.js security.js login-security-context.js loyalty.js loyalty-contact-gate-preload.js registration-security.js test-mode-setup.js bot-menu-sync.js admin-broadcast-server.js broadcast-scheduler.js schedule-api-preload.js immediate-broadcast-queue-preload.js security-preload.js admin-security-preload.js ./
 EXPOSE 3000 3001
 USER node
-CMD ["sh","-c","node test-mode-setup.js && node --import ./loyalty-contact-gate-preload.js server.js"]
+CMD ["sh","-c","node test-mode-setup.js && node --import ./loyalty-contact-gate-preload.js --import ./security-preload.js server.js"]

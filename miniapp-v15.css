@@ -7,3 +7,9 @@ html,body{width:100%;min-height:100%;background:#08090b}#app{width:100%;max-widt
 .bottom button>span:last-child{display:block;width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bottom button .cart-badge{top:2px;left:calc(50% + 6px);display:block;width:auto;overflow:visible;white-space:nowrap;text-overflow:clip}
 .empty-cart>button{width:100%;min-height:50px;margin:20px 0 0;display:flex;align-items:center;justify-content:center;text-align:center;white-space:normal}
+
+
+/* Keep the quantity badge and label in separate tracks on narrow product cards. */
+.product-info .add-button.has-items{display:grid!important;grid-template-columns:32px minmax(0,1fr)!important;align-items:center!important;justify-content:stretch!important;column-gap:8px!important;padding:9px 8px!important;text-align:center!important;white-space:normal!important;line-height:1.15!important}
+.product-info .add-button.has-items .button-count{position:static!important;left:auto!important;top:auto!important;width:32px!important;min-width:32px!important;height:28px!important;padding:0 4px!important;transform:none!important;animation:none!important;line-height:28px!important;text-align:center!important}
+@media(max-width:360px){.product-info .add-button.has-items{grid-template-columns:29px minmax(0,1fr)!important;column-gap:6px!important;padding-inline:6px!important;font-size:12px!important}.product-info .add-button.has-items .button-count{width:29px!important;min-width:29px!important;height:26px!important;line-height:26px!important}}

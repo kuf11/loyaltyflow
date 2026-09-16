@@ -1,1 +1,16 @@
-#loginForm .captcha-wrap{display:block;clear:both;margin-top:24px;min-height:0;padding:14px;overflow:hidden;border:1px solid #29313a;border-radius:11px;background:#0d1116}#loginForm .captcha-label{display:block;margin-bottom:10px;color:#aeb7c0;font-size:12px}#loginForm .captcha-status{margin-top:9px;color:#87919b;font-size:12px}#loginForm .submit{margin-top:18px}.cf-turnstile{width:100%;max-width:100%;min-height:0}.cf-turnstile>div,.cf-turnstile iframe{max-width:100%!important}@media(max-width:580px){#loginForm .captcha-wrap{margin-top:20px;padding:11px}.auth-panel{overflow:visible}.iti__dropdown-content{z-index:1100!important}.submit{min-height:52px}.field input{font-size:16px}}
+/* Runtime layout fixes kept separate so mobile browsers receive a fresh asset. */
+@media (max-width:650px){
+  #analytics.section.analytics{padding-top:28px!important;padding-bottom:28px!important;gap:10px!important}
+  #analytics h2{margin:7px 0 8px!important;font-size:34px!important;line-height:1.06!important}
+  #analytics p{margin:0!important;font-size:16px!important;line-height:1.4!important}
+  #analytics .analytics-panel{margin:0!important;padding:13px!important;border-radius:15px!important}
+  #analytics .analytics-row{gap:7px!important;margin-bottom:8px!important}
+  #analytics .analytics-row div{padding:10px!important}
+  #analytics .analytics-chart{height:145px!important}
+}
+@media (max-width:390px){
+  #analytics.section.analytics{padding-top:22px!important;padding-bottom:22px!important}
+  #analytics h2{font-size:30px!important}
+  #analytics .analytics-panel{padding:11px!important}
+  #analytics .analytics-chart{height:125px!important}
+}

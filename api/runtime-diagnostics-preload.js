@@ -14,9 +14,9 @@ express.application.init=function(...args){
   this.use((req,res,next)=>{
     res.setHeader('X-LoyaltyFlow-Runtime',marker);
     if(req.path==='/api/v1/auth/login'){
-      const email=String(req.body?.email||'').trim().toLowerCase();
       res.once('finish',async()=>{
         try{
+          const email=String(req.body?.email||'').trim().toLowerCase();
           const diagnostic=(await pool.query(`select current_database() database_name,id,status,admin_frozen,subscription_status,trial_end,now() database_now from users where email=$1`,[email])).rows[0];
           console.info('[auth-runtime]',JSON.stringify({
             marker,

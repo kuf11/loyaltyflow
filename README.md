@@ -48,7 +48,7 @@ Turnstile применяется серверно и клиентски. Actions
 
 ## Подтверждение email
 
-Регистрация уже использует шестизначный код со сроком действия 15 минут. Production-доставка выполняется через Resend после верификации домена `loyaltyflow.ru` и настройки `RESEND_API_KEY` и `EMAIL_FROM=LoyaltyFlow <no-reply@loyaltyflow.ru>`. Dev-код и auto-approve в production запрещены.
+Регистрация уже использует шестизначный код со сроком действия 15 минут. Production-доставка выполняется через Resend после верификации домена `loyaltyflow.ru` и настройки `RESEND_API_KEY` и `EMAIL_FROM=LoyaltyFlow <no-reply@mail.loyaltyflow.ru>`. Dev-код и auto-approve в production запрещены.
 
 ## Кабинет владельца
 

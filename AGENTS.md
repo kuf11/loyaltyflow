@@ -14,7 +14,7 @@ TOKEN-DIET MODE IS ACTIVE. Cut wasted words, never substance, correctness, or re
 - Единственная production-ветка: `backup/pre-glass-redesign-20260915`.
 - `main` содержит отменённый glass-redesign. Не merge, не cherry-pick и не `git pull main`.
 - Production-каталог: `/opt/loyaltyflow`.
-- Публичный хост: `https://31.77.207.38.nip.io`.
+- Публичный хост: `https://loyaltyflow.ru`.
 - Пользователь уже работает в терминале сервера: не просить SSH и не писать команду `ssh`.
 - Не запрашивать и не выводить `.env`, токены, пароли, API-ключи и приватные ключи.
 

@@ -14,3 +14,7 @@
 .broadcast-bottom-action{width:100%;padding:4px 0 0}.broadcast-bottom-action .primary-action{width:100%;min-height:54px;font-size:15px}
 @media(max-width:760px){.button-palette{grid-template-columns:1fr 1fr}.button-palette label{min-height:46px}.broadcast-bottom-action .primary-action{min-height:56px;font-size:16px;border-radius:12px}}
 @media(max-width:380px){.button-palette{grid-template-columns:1fr}}
+
+/* Telegram-compatible emoji picker. */
+.emoji-picker{position:absolute;z-index:20;width:min(360px,calc(100% - 42px));margin:52px 20px 0;padding:12px;border:1px solid #33404a;border-radius:14px;background:#111820;box-shadow:0 18px 50px rgba(0,0,0,.46)}.emoji-grid{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:4px;max-height:220px;overflow:auto}.emoji-grid button{aspect-ratio:1;min-width:0;border:0;border-radius:9px;background:transparent;color:#fff;font-size:23px;cursor:pointer}.emoji-grid button:hover,.emoji-grid button:focus-visible{background:#26323b;outline:2px solid var(--green);outline-offset:-2px}.message-panel{position:relative}
+@media(max-width:600px){.emoji-picker{position:relative;width:100%;margin:8px 0 10px;padding:10px}.emoji-grid{grid-template-columns:repeat(6,minmax(0,1fr));max-height:190px}.emoji-grid button{font-size:22px}}

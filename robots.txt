@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /auth.html
+Allow: /privacy.html
+Allow: /favicon.svg
+Allow: /logo-mark.svg
+Disallow: /api/
+Disallow: /admin-api/
+Disallow: /admin
+Disallow: /index.html
+Disallow: /login.html
+Disallow: /register.html
+Disallow: /forgot-password.html
+Disallow: /cashier
+Disallow: /miniapp.html
+Sitemap: https://loyaltyflow.ru/sitemap.xml

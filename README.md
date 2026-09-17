@@ -7,7 +7,7 @@ LoyaltyFlow — SaaS-платформа программы лояльности:
 - Репозиторий: `kuf11/loyaltyflow`.
 - Активная ветка: `backup/pre-glass-redesign-20260915`.
 - Каталог сервера: `/opt/loyaltyflow`.
-- Публичный адрес: `https://31.77.207.38.nip.io`.
+- Публичный адрес: `https://loyaltyflow.ru`.
 - `main` не использовать: там отменённый glass-redesign.
 - Точные команды и правила для агентов: `AGENTS.md`.
 
@@ -45,6 +45,10 @@ Admin API слушает только `127.0.0.1:3101`. Публичные API-�
 - отправка номера в международном формате.
 
 Turnstile применяется серверно и клиентски. Actions должны совпадать с backend: `register` для регистрации, `login` для входа. На узких экранах виджеты используют flexible size. `auth-runtime-fixes.css` отвечает за зазор между password и CAPTCHA и за отсутствие mobile overflow.
+
+## Подтверждение email
+
+Регистрация уже использует шестизначный код со сроком действия 15 минут. Production-доставка выполняется через Resend после верификации домена `loyaltyflow.ru` и настройки `RESEND_API_KEY` и `EMAIL_FROM=LoyaltyFlow <no-reply@mail.loyaltyflow.ru>`. Dev-код и auto-approve в production запрещены.
 
 ## Кабинет владельца
 

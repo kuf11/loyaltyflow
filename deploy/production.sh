@@ -2,7 +2,8 @@
 set -Eeuo pipefail
 cd /opt/loyaltyflow
 export DEBIAN_FRONTEND=noninteractive
-DOMAIN=31.77.207.38.nip.io
+DOMAIN=${DOMAIN:-loyaltyflow.ru}
+EXPECTED_IPV4=${EXPECTED_IPV4:-31.77.207.38}
 SCHEME=https
 API_PORT=3100
 ADMIN_API_PORT=3101
@@ -13,6 +14,11 @@ systemctl enable --now docker nginx
 if docker compose version >/dev/null 2>&1; then COMPOSE=(docker compose); elif command -v docker-compose >/dev/null 2>&1; then COMPOSE=(docker-compose); else apt-get install -y docker-compose-plugin 2>/dev/null || apt-get install -y docker-compose; if docker compose version >/dev/null 2>&1; then COMPOSE=(docker compose); else COMPOSE=(docker-compose); fi; fi
 git fetch --prune origin "$DEPLOY_BRANCH"
 git reset --hard FETCH_HEAD
+RESOLVED_IPV4=$(getent ahostsv4 "$DOMAIN" | awk '{print $1}' | sort -u)
+if ! grep -Fxq "$EXPECTED_IPV4" <<<"$RESOLVED_IPV4"; then
+  echo "DNS $DOMAIN ещё не указывает на $EXPECTED_IPV4. Текущие IPv4: ${RESOLVED_IPV4:-не найдены}" >&2
+  exit 1
+fi
 if [ ! -f .env ]; then
 cat >.env <<ENV
 POSTGRES_PASSWORD=$(openssl rand -hex 24)
@@ -35,6 +41,10 @@ chmod 600 .env
 else
 if ! grep -Eq '^BOT_TOKEN_ENCRYPTION_KEY=.+$' .env; then sed -i '/^BOT_TOKEN_ENCRYPTION_KEY=/d' .env; printf '\nBOT_TOKEN_ENCRYPTION_KEY=%s\n' "$(openssl rand -hex 48)" >>.env; chmod 600 .env; fi
 fi
+set_env(){ local key=$1 value=$2; if grep -q "^${key}=" .env; then sed -i "s#^${key}=.*#${key}=${value}#" .env; else printf '%s=%s\n' "$key" "$value" >>.env; fi; }
+set_env PUBLIC_APP_URL "${SCHEME}://${DOMAIN}/miniapp.html?tenant=main"
+set_env CORS_ORIGINS "${SCHEME}://${DOMAIN}"
+chmod 600 .env
 "${COMPOSE[@]}" up -d --build
 find /etc/nginx/sites-enabled -mindepth 1 -maxdepth 1 -type l -delete
 cat >/etc/nginx/sites-available/loyaltyflow <<NGINX

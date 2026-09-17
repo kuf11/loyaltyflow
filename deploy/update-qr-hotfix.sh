@@ -23,8 +23,9 @@ nginx -t
 systemctl reload nginx
 
 echo "==> Checking miniapp QR cache-bust and hotfix code"
-curl -ksS --resolve "${DOMAIN}:443:127.0.0.1" "${SCHEME}://${DOMAIN}/miniapp.html?tenant=main" | grep -F 'miniapp-qr.js?v=10' >/dev/null
-curl -ksS --resolve "${DOMAIN}:443:127.0.0.1" "${SCHEME}://${DOMAIN}/miniapp-qr.js?v=10" | grep -F 'ensureLabelNode' >/dev/null
+curl -ksS --resolve "${DOMAIN}:443:127.0.0.1" "${SCHEME}://${DOMAIN}/miniapp.html?tenant=main" | grep -F 'miniapp-qr.js?v=11' >/dev/null
+curl -ksS --resolve "${DOMAIN}:443:127.0.0.1" "${SCHEME}://${DOMAIN}/miniapp-qr.js?v=11" | grep -F 'originalQrPage' >/dev/null
+curl -ksS --resolve "${DOMAIN}:443:127.0.0.1" "${SCHEME}://${DOMAIN}/miniapp-qr.js?v=11" | grep -F 'ensureLabelNode' >/dev/null
 
 echo "==> Checking protected paths"
 for path in /.env /.git/config /docker-compose.yml /deploy/update-qr-hotfix.sh /deploy/production.sh; do

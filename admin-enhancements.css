@@ -1,1 +1,7 @@
 .metric-link{cursor:pointer;transition:border-color .17s ease,background .17s ease,transform .17s ease}.metric-link:hover{background:#191d22;border-color:#3a4a42;transform:translateY(-2px)}.metric-link:focus-visible{outline:2px solid #70d7a5;outline-offset:3px}.metric-link:active{transform:translateY(0)}.profile-editor{margin-top:18px;padding-top:4px;border-top:1px solid #20242b}.profile-editor[hidden]{display:none}.profile-editor .actions{margin-top:14px}.profile-status{min-height:22px;margin-top:10px;color:#70d7a5}.btn:disabled{opacity:.55;cursor:wait}@media(prefers-reduced-motion:reduce){.metric-link{transition:none}.metric-link:hover{transform:none}}
+
+
+/* Keep the live trial countdown readable on narrow screens. */
+#trialMetric{min-width:0;font-variant-numeric:tabular-nums;white-space:nowrap;letter-spacing:-.035em;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:720px){.metrics .trial-metric{grid-column:1/-1}#trialMetric{font-size:clamp(24px,8vw,30px);line-height:1.1;letter-spacing:-.045em}}
+@media(max-width:360px){#trialMetric{font-size:24px;letter-spacing:-.05em}}

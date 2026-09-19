@@ -17,6 +17,9 @@ import ru.evotor.framework.core.action.event.receipt.discount.ReceiptDiscountEve
 import ru.evotor.framework.core.action.event.receipt.discount.ReceiptDiscountEventProcessor;
 import ru.evotor.framework.core.action.event.receipt.discount.ReceiptDiscountEventResult;
 import ru.evotor.framework.core.action.processor.ActionProcessor;
+import ru.evotor.framework.receipt.Position;
+import ru.evotor.framework.receipt.Receipt;
+import ru.evotor.framework.receipt.ReceiptApi;
 
 /** Entry point shown by Evotor on the payment screen. */
 public final class LoyaltyDiscountService extends IntegrationService {
@@ -34,6 +37,11 @@ public final class LoyaltyDiscountService extends IntegrationService {
                 Intent intent = new Intent(getApplicationContext(), LoyaltyFlowActivity.class);
                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 intent.putExtra(LoyaltyFlowActivity.EXTRA_FROM_PAYMENT, true);
+                intent.putExtra(LoyaltyFlowActivity.EXTRA_RECEIPT_UUID, event.getReceiptUuid());
+                intent.putExtra(
+                        LoyaltyFlowActivity.EXTRA_RECEIPT_TOTAL,
+                        readReceiptTotal(event).doubleValue()
+                );
                 try {
                     callback.startActivity(intent);
                 } catch (RemoteException error) {
@@ -43,6 +51,22 @@ public final class LoyaltyDiscountService extends IntegrationService {
             }
         });
         return processors;
+    }
+
+    private BigDecimal readReceiptTotal(ReceiptDiscountEvent event) {
+        Receipt receipt = ReceiptApi.getReceipt(this, event.getReceiptUuid());
+        if (receipt == null) return BigDecimal.ZERO;
+
+        BigDecimal total = BigDecimal.ZERO;
+        for (Position position : receipt.getPositions()) {
+            BigDecimal price = position.getPriceWithDiscountPosition();
+            if (price == null) price = position.getPrice();
+            BigDecimal quantity = position.getQuantity();
+            if (price != null && quantity != null) {
+                total = total.add(price.multiply(quantity));
+            }
+        }
+        return total;
     }
 
     static void finishWithDiscount(double amount) {

@@ -72,7 +72,7 @@ cd /opt/loyaltyflow-evotor-app && \
 Результат:
 
 ```text
-/opt/loyaltyflow-evotor-app/app/build/outputs/apk/debug/app-debug.apk
+/opt/loyaltyflow-evotor-app/evotor-app/app/build/outputs/apk/debug/app-debug.apk
 ```
 
 Если появляется `BUILD SUCCESSFUL`, APK собран. Если Docker не может скачать образ или Gradle — проверить доступ к реестру и интернет, не менять production-конфигурацию.
@@ -82,7 +82,7 @@ cd /opt/loyaltyflow-evotor-app && \
 С сервера на компьютер через SSH/SCP:
 
 ```bash
-scp root@SERVER_IP:/opt/loyaltyflow-evotor-app/app/build/outputs/apk/debug/app-debug.apk .
+scp root@SERVER_IP:/opt/loyaltyflow-evotor-app/evotor-app/app/build/outputs/apk/debug/app-debug.apk .
 ```
 
 Далее APK можно передать на телефон любым безопасным способом. Не публиковать APK и токены в открытом доступе.

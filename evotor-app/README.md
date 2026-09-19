@@ -128,3 +128,19 @@ scp root@SERVER_IP:/opt/loyaltyflow-evotor-app/evotor-app/app/build/outputs/apk/
 ```
 
 Для Java использовать `actions/setup-java@v5`.
+
+
+## Manifest merger: конфликт `allowBackup`
+
+Если сборка сообщает, что `android:allowBackup` задан одновременно приложением и `com.github.evotor:integration-library`, в корневом `AndroidManifest.xml` должны быть подключены tools и override:
+
+```xml
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+<application
+    android:allowBackup="false"
+    tools:replace="android:allowBackup">
+```
+
+Это явно оставляет безопасное значение приложения и разрешает Android manifest merger объединить манифест библиотеки Эвотор.

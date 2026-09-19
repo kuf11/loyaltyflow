@@ -85,10 +85,10 @@ public final class LoyaltyFlowActivity extends Activity {
             status.setText("Сумма текущего чека Эвотор не получена");
             return;
         }
-        status.setText("Проверяем баланс клиента. Сумма чека: " + formatMoney(receiptTotal) + " ₽");
         // The production implementation will call the authenticated
         // /api/v1/evotor/app/customer endpoint and display level/limit here.
-        status.setText("Сумма получена из кассы. Подключите backend quote endpoint для проверки QR.");
+        status.setText("Сумма из кассы: " + formatMoney(receiptTotal)
+                + " ₽. Подключите backend quote endpoint для проверки QR.");
     }
 
     private void applyDiscount() {

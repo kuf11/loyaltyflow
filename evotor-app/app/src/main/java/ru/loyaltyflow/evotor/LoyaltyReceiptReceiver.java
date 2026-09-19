@@ -1,60 +1,41 @@
 package ru.loyaltyflow.evotor;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
 
-import ru.evotor.framework.receipt.event.ApplyDiscountToReceiptEvent;
-import ru.evotor.framework.receipt.event.ReceiptCompletedEvent;
-import ru.evotor.framework.receipt.event.ReceiptCreatedEvent;
-import ru.evotor.framework.receipt.event.ReceiptDeletedEvent;
-import ru.evotor.framework.receipt.event.ReceiptEditScreenOpenedEvent;
-import ru.evotor.framework.receipt.event.ReceiptPaymentScreenOpenedEvent;
-import ru.evotor.framework.receipt.event.ReceiptWithPaymentIntentPaidEvent;
-import ru.evotor.framework.receipt.event.handler.receiver.ReceiptBroadcastReceiver;
-import ru.evotor.framework.receipt.position.event.PositionAddedEvent;
-import ru.evotor.framework.receipt.position.event.PositionRemovedEvent;
-import ru.evotor.framework.receipt.position.event.PositionUpdatedEvent;
+import ru.evotor.framework.core.action.event.receipt.receipt_edited.ReceiptClearedEvent;
+import ru.evotor.framework.core.action.event.receipt.receipt_edited.ReceiptClosedEvent;
 
 /** Commits a reservation after a sale or releases it when the receipt is cleared. */
-public final class LoyaltyReceiptReceiver extends ReceiptBroadcastReceiver {
-    public LoyaltyReceiptReceiver() {
-        super(
-                "evotor.intent.action.receipt.sell.OPENED",
-                "evotor.intent.action.receipt.sell.POSITION_ADDED",
-                "evotor.intent.action.receipt.sell.POSITION_EDITED",
-                "evotor.intent.action.receipt.sell.POSITION_REMOVED",
-                "evotor.intent.action.receipt.sell.APPLY_DISCOUNT_TO_RECEIPT",
-                "evotor.intent.action.receipt.sell.CLEARED",
-                "evotor.intent.action.receipt.sell.RECEIPT_CLOSED",
-                "evotor.intent.action.receipt.sell.EDIT_SCREEN_OPENED",
-                "evotor.intent.action.receipt.sell.PAYMENT_SCREEN_OPENED",
-                "evotor.intent.action.receipt.sell.paymentIntent.PAID");
-    }
-
-    @Override protected void handleReceiptCreatedEvent(Context context, ReceiptCreatedEvent event) { }
-    @Override protected void handlePositionAddedEvent(Context context, PositionAddedEvent event) { }
-    @Override protected void handlePositionUpdatedEvent(Context context, PositionUpdatedEvent event) { }
-    @Override protected void handlePositionRemovedEvent(Context context, PositionRemovedEvent event) { }
-    @Override protected void handleApplyDiscountToReceiptEvent(Context context, ApplyDiscountToReceiptEvent event) { }
-    @Override protected void handleReceiptEditScreenOpenedEvent(Context context, ReceiptEditScreenOpenedEvent event) { }
-    @Override protected void handleReceiptPaymentScreenOpenedEvent(Context context, ReceiptPaymentScreenOpenedEvent event) { }
-    @Override protected void handleReceiptWithPaymentIntentPaid(Context context, ReceiptWithPaymentIntentPaidEvent event) { }
+public final class LoyaltyReceiptReceiver extends BroadcastReceiver {
+    private static final String SELL_CLEARED = "evotor.intent.action.receipt.sell.CLEARED";
+    private static final String SELL_CLOSED = "evotor.intent.action.receipt.sell.RECEIPT_CLOSED";
 
     @Override
-    protected void handleReceiptCompletedEvent(Context context, ReceiptCompletedEvent event) {
-        finishAsync(context, event.getReceiptUuid(), true);
-    }
+    public void onReceive(Context context, Intent intent) {
+        String action = intent == null ? "" : intent.getAction();
+        String receiptUuid = null;
+        boolean commit = false;
+        if (SELL_CLOSED.equals(action)) {
+            ReceiptClosedEvent event = ReceiptClosedEvent.create(intent.getExtras());
+            if (event != null) {
+                receiptUuid = event.getReceiptUuid();
+                commit = true;
+            }
+        } else if (SELL_CLEARED.equals(action)) {
+            ReceiptClearedEvent event = ReceiptClearedEvent.create(intent.getExtras());
+            if (event != null) receiptUuid = event.getReceiptUuid();
+        }
+        if (receiptUuid == null || receiptUuid.isEmpty()) return;
 
-    @Override
-    protected void handleReceiptDeletedEvent(Context context, ReceiptDeletedEvent event) {
-        finishAsync(context, event.getReceiptUuid(), false);
-    }
-
-    private void finishAsync(Context context, String receiptUuid, boolean commit) {
+        final String finalReceiptUuid = receiptUuid;
+        final boolean finalCommit = commit;
         final PendingResult pending = goAsync();
         new Thread(() -> {
             try {
-                if (commit) LoyaltyDiscountService.commitReservation(context, receiptUuid);
-                else LoyaltyDiscountService.releaseReservation(context, receiptUuid);
+                if (finalCommit) LoyaltyDiscountService.commitReservation(context, finalReceiptUuid);
+                else LoyaltyDiscountService.releaseReservation(context, finalReceiptUuid);
             } finally {
                 pending.finish();
             }

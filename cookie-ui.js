@@ -1,0 +1,1 @@
+(()=>{document.querySelectorAll('.lf-global-loader').forEach(node=>node.remove());if(location.pathname.startsWith('/miniapp'))document.querySelectorAll('.essential-cookie-notice').forEach(node=>node.remove())})();

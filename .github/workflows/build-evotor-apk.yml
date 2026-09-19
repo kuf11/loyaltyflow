@@ -1,0 +1,54 @@
+name: Build LoyaltyFlow Evotor APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feat/loyaltyflow-evotor-apk-20260918
+    paths:
+      - "evotor-app/**"
+      - ".github/workflows/build-evotor-apk.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Android packages
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Gradle
+        uses: gradle/gradle-build-action@v3
+        with:
+          gradle-version: "8.9"
+
+      - name: Build debug APK
+        working-directory: evotor-app
+        run: |
+          gradle --no-daemon \
+            --max-workers=2 \
+            --console=plain \
+            -Dorg.gradle.jvmargs="-Xmx2g -Dfile.encoding=UTF-8" \
+            :app:assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: loyaltyflow-evotor-debug-apk
+          path: evotor-app/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error

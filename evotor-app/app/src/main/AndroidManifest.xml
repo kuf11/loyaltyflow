@@ -1,0 +1,41 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <application
+        android:allowBackup="false"
+        tools:replace="android:allowBackup"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar">
+        <activity android:name=".LoyaltyFlowActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.EVOTOR" />
+            </intent-filter>
+        </activity>
+        <service
+            android:name=".LoyaltyDiscountService"
+            android:enabled="true"
+            android:exported="true"
+            android:icon="@android:drawable/ic_menu_info_details"
+            android:label="LoyaltyFlow">
+            <intent-filter android:priority="20">
+                <action android:name="evo.v2.receipt.sell.receiptDiscount" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </service>
+        <receiver
+            android:name=".LoyaltyReceiptReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="evotor.intent.action.receipt.sell.CLEARED" />
+                <action android:name="evotor.intent.action.receipt.sell.RECEIPT_CLOSED" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

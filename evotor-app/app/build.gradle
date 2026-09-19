@@ -1,0 +1,37 @@
+plugins { id 'com.android.application' }
+
+def loyaltyflowBaseUrl = project.findProperty('loyaltyflowBaseUrl') ?: 'https://CHANGE_ME.example'
+def loyaltyflowAppToken = project.findProperty('loyaltyflowAppToken') ?: ''
+def configString = { value -> '"' + String.valueOf(value).replace('\\', '\\\\').replace('"', '\\"') + '"' }
+
+android {
+    namespace 'ru.loyaltyflow.evotor'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'ru.loyaltyflow.evotor'
+        minSdk 23
+        targetSdk 28
+        versionCode 1
+        versionName '0.1.0'
+        buildConfigField 'String', 'LOYALTYFLOW_BASE_URL', configString(loyaltyflowBaseUrl)
+        buildConfigField 'String', 'LOYALTYFLOW_APP_TOKEN', configString(loyaltyflowAppToken)
+    }
+
+    buildTypes {
+        debug { applicationIdSuffix '.debug' }
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    buildFeatures { buildConfig true }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_1_8; targetCompatibility JavaVersion.VERSION_1_8 }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'com.google.android.material:material:1.12.0'
+    implementation 'com.github.evotor:integration-library:v0.4.10'
+}

@@ -144,9 +144,9 @@ gradle --no-daemon \
   :app:assembleDebug
 ```
 
-Не встраивайте токен в README, исходный код, скриншоты или публичные артефакты. Для GitHub Actions используйте secrets `LOYALTYFLOW_BASE_URL` и `LOYALTYFLOW_APP_TOKEN`.
+Не встраивайте токен в README, исходный код, скриншоты или публичные артефакты. Для GitHub Actions добавьте secrets `LOYALTYFLOW_BASE_URL` и `LOYALTYFLOW_APP_TOKEN` в репозитории. Workflow автоматически передаст их в debug-сборку; если secrets не заданы, APK соберётся только как демонстрационный интерфейс без доступа к API.
 
-Сценарий резерва: APK вызывает `customer`, затем `reserve`; после возврата скидки в чек событие `RECEIPT_CLOSED` вызывает `commit`, а событие `CLEARED` вызывает `release`. Резерв живёт 10 минут и идемпотентен по `requestId`.
+Сценарий резерва: APK вызывает `customer`, затем `reserve`; после возврата скидки в чек событие `RECEIPT_CLOSED` вызывает `commit`, а событие `CLEARED` вызывает `release`. Резерв живёт 10 минут и идемпотентен по `requestId`. Обработчик событий использует совместимые с SDK v0.4.10 Java-события `ReceiptClosedEvent` и `ReceiptClearedEvent`.
 
 ## Требуемый backend-контракт
 

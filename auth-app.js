@@ -4,7 +4,7 @@ let turnstilePromise=null;
 let phoneInstance=null;
 let phoneInitPromise=null;
 const phoneInput=document.querySelector('#reg input[name="phone"]');
-const safeReturnPath=()=>{const value=new URLSearchParams(location.search).get('next');if(!value||!value.startsWith('/')||value.startsWith('//'))return'/';try{const target=new URL(value,location.origin);return target.origin===location.origin?target.pathname+target.search+target.hash:'/'}catch{return'/'}};
+const safeReturnPath=()=>{const value=new URLSearchParams(location.search).get('next');if(!value||!value.startsWith('/')||value.startsWith('//'))return'/index.html';try{const target=new URL(value,location.origin);return target.origin===location.origin?target.pathname+target.search+target.hash:'/'}catch{return'/index.html'}};
 const message=(value,error=false)=>{const host=document.querySelector('#message');if(!host)return;host.replaceChildren();const box=document.createElement('div');box.className='msg'+(error?' error':'');box.textContent=String(value??'');host.appendChild(box)};
 async function call(url,body){const response=await fetch(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});const data=await response.json().catch(()=>null);if(!data||!response.ok)throw Error(data?.error||'Сервис временно недоступен');return data}
 function tab(name){for(const id of['reg','verify','login'])document.querySelector('#'+id).classList.add('hide');document.querySelector('#'+name).classList.remove('hide');regTab.classList.toggle('on',name==='reg');loginTab.classList.toggle('on',name==='login');if(name==='reg')mountCaptcha('reg');if(name==='login')mountCaptcha('login')}

@@ -144,3 +144,15 @@ scp root@SERVER_IP:/opt/loyaltyflow-evotor-app/evotor-app/app/build/outputs/apk/
 ```
 
 Это явно оставляет безопасное значение приложения и разрешает Android manifest merger объединить манифест библиотеки Эвотор.
+
+
+## Duplicate classes: AndroidX и старый Support Library
+
+Если Gradle сообщает о дублирующихся классах между `androidx.core` и `com.android.support:support-compat`, включи Jetifier в `evotor-app/gradle.properties`:
+
+```properties
+android.useAndroidX=true
+android.enableJetifier=true
+```
+
+Jetifier преобразует старую Support Library, которую использует версия интеграционной библиотеки Эвотор, в AndroidX. Не добавляй одновременно ручные исключения для `support-compat`, пока Jetifier не проверен.

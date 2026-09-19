@@ -156,3 +156,18 @@ android.enableJetifier=true
 ```
 
 Jetifier преобразует старую Support Library, которую использует версия интеграционной библиотеки Эвотор, в AndroidX. Не добавляй одновременно ручные исключения для `support-compat`, пока Jetifier не проверен.
+
+
+## Компиляция `LoyaltyDiscountService` и SDK v0.4.10
+
+Версия `com.github.evotor:integration-library:v0.4.10` использует вложенный тип `ActionProcessor.Callback`, поэтому callback нужно объявлять как `ActionProcessor.Callback`. В этой версии `ReceiptDiscountEventResult` принимает три аргумента:
+
+```java
+new ReceiptDiscountEventResult(
+    BigDecimal.valueOf(discount),
+    null,
+    changes
+);
+```
+
+Не использовать четырёхаргументный конструктор из более новой версии SDK: он не существует в `v0.4.10`.

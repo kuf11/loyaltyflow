@@ -2,6 +2,7 @@ package ru.loyaltyflow.evotor;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.text.InputType;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -21,7 +22,7 @@ public final class LoyaltyFlowActivity extends Activity {
     static final String EXTRA_RECEIPT_TOTAL = "receipt_total";
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
-    private EditText qrInput, amountInput;
+    private EditText qrInput, phoneInput, amountInput;
     private TextView status;
     private double receiptTotal;
     private double approvedDiscount = 0d;
@@ -42,14 +43,24 @@ public final class LoyaltyFlowActivity extends Activity {
 
         status = new TextView(this);
         status.setText(receiptTotal > 0d
-                ? "Сумма чека получена из Эвотор. Отсканируйте QR клиента."
+                ? "Сумма чека получена из Эвотор. Выберите способ поиска клиента."
                 : "Не удалось получить сумму текущего чека Эвотор.");
         root.addView(status);
 
+        TextView lookupLabel = new TextView(this);
+        lookupLabel.setText("Клиент: QR-код или номер телефона");
+        root.addView(lookupLabel);
+
         qrInput = new EditText(this);
-        qrInput.setHint("QR или код клиента");
+        qrInput.setHint("QR-код клиента");
         qrInput.setSingleLine(true);
         root.addView(qrInput);
+
+        phoneInput = new EditText(this);
+        phoneInput.setHint("Номер телефона, например +7 900 000-00-00");
+        phoneInput.setInputType(InputType.TYPE_CLASS_PHONE);
+        phoneInput.setSingleLine(true);
+        root.addView(phoneInput);
 
         amountInput = new EditText(this);
         amountInput.setHint("Сумма покупки из кассы, ₽");
@@ -77,24 +88,40 @@ public final class LoyaltyFlowActivity extends Activity {
 
     private void quote() {
         String qr = qrInput.getText().toString().trim();
-        if (qr.isEmpty()) {
-            status.setText("Отсканируйте QR или введите код клиента");
+        String phone = normalizePhone(phoneInput.getText().toString());
+        if (qr.isEmpty() && phone.isEmpty()) {
+            status.setText("Покажите QR клиента или введите номер телефона");
+            return;
+        }
+        if (!qr.isEmpty() && !phone.isEmpty()) {
+            status.setText("Выберите только один способ поиска клиента");
+            return;
+        }
+        if (!phone.isEmpty() && !phone.matches("^\\+?[0-9]{10,15}$")) {
+            status.setText("Проверьте номер телефона");
             return;
         }
         if (receiptTotal <= 0d) {
             status.setText("Сумма текущего чека Эвотор не получена");
             return;
         }
+
+        String method = qr.isEmpty() ? "по номеру телефона" : "по QR-коду";
         // The production implementation will call the authenticated
         // /api/v1/evotor/app/customer endpoint and display level/limit here.
         status.setText("Сумма из кассы: " + formatMoney(receiptTotal)
-                + " ₽. Подключите backend quote endpoint для проверки QR.");
+                + " ₽. Ищем клиента " + method
+                + ". Подключите backend quote endpoint.");
     }
 
     private void applyDiscount() {
         if (approvedDiscount <= 0d) { status.setText("Сначала проверьте клиента"); return; }
         LoyaltyDiscountService.finishWithDiscount(approvedDiscount);
         finish();
+    }
+
+    private static String normalizePhone(String value) {
+        return value == null ? "" : value.replaceAll("[^0-9+]", "");
     }
 
     private static String formatMoney(double value) {

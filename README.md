@@ -95,7 +95,7 @@ Turnstile применяется серверно и клиентски. Actions
 11. `miniapp-search-ui-fix.js`
 12. `miniapp-security.js`
 
-Поздние файлы исправляют ранний runtime, поэтому порядок нельзя менять без полного regression-теста. Legacy-файлы вне активного runtime не загружаются текущей страницей.
+Поздние файлы исправляют ранний runtime, поэтому порядок нельзя менять без полного regression-теста. `miniapp.js`, `miniapp-v9.js` и `miniapp-stock-flags-fix.js` текущей страницей не загружаются.
 
 ## Backend (`api/`)
 
@@ -116,7 +116,7 @@ Turnstile применяется серверно и клиентски. Actions
 | `init.sql` | Начальная схема PostgreSQL |
 | `Dockerfile`, `package.json` | Сборка и проверки API |
 
-Backend использует файл `api/schedule-api-preload.js` для операций расписания.
+Backend использует файл `api/schedule-api-preload.js`. Одноимённый файл в корне не является импортом API-контейнера.
 
 ## Docker и Nginx
 
@@ -201,11 +201,6 @@ docker compose up -d --build
 docker compose ps
 curl -fsS http://127.0.0.1:3100/api/health
 ```
-
-## Касса и общий favicon
-
-- На странице кассира после ввода суммы покупки и бонусов показывается итоговая сумма, которую нужно ввести в кассе: `сумма чека − скидка бонусами`.
-- Иконка сайта, manifest и цвет темы подключены к рабочим HTML-страницам кабинета, кассы, интеграций и Telegram Mini App.
 
 ## Известные ограничения
 

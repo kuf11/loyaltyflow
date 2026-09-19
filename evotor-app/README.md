@@ -13,7 +13,7 @@
 - текущая ветка: `feat/loyaltyflow-evotor-apk-20260918`;
 - production-ветка сайта: `backup/pre-glass-redesign-20260915`.
 
-Это **не готовый production APK**. Для рабочего списания бонусов необходимо подключить backend quote/reserve/commit/release, pairing приложения с кабинетом владельца, release-подпись и тест на реальном терминале.
+Это **debug APK для тестирования**. Серверные маршруты quote/reserve/commit/release добавлены в этой ветке, но перед production нужны настройка секретов, pairing приложения с кабинетом владельца, release-подпись и тест на реальном терминале.
 
 ## Важное разделение каталогов
 
@@ -92,7 +92,7 @@ scp root@SERVER_IP:/opt/loyaltyflow-evotor-app/evotor-app/app/build/outputs/apk/
 ## Ограничения debug APK
 
 - debug APK предназначен для просмотра интерфейса;
-- URL backend пока является placeholder и не даёт production-доступа;
+- URL и токен backend передаются в APK через Gradle properties; значения по умолчанию являются placeholder и не дают доступа;
 - реальные QR, поиск по телефону, баланс, резерв, подтверждение и возврат бонусов ещё должны быть подключены через защищённые endpoint-ы;
 - для установки на реальный терминал Эвотор потребуется release-сборка, подпись и проверка совместимости SDK.
 
@@ -124,6 +124,30 @@ QR сохраняется как основной быстрый способ. �
 
 Номер телефона является персональными данными: его можно сохранять только с уведомлением клиента и в рамках опубликованной политики обработки персональных данных.
 
+## Настройка Evotor API
+
+Серверные маршруты защищены отдельным токеном приложения и привязаны к одному владельцу через переменные окружения. Секреты не добавлять в Git:
+
+```bash
+export EVOTOR_OWNER_ID="UUID-пользователя-владельца"
+export EVOTOR_APP_TOKEN="случайный-длинный-секрет"
+```
+
+`EVOTOR_OWNER_ID` — это `users.id` владельца программы. `EVOTOR_APP_TOKEN` должен быть одинаковым на сервере и только в секретах сборки APK. Перезапустите API после изменения переменных окружения.
+
+Для сборки APK с настройками API используйте Gradle properties или секреты CI:
+
+```bash
+gradle --no-daemon \
+  -PloyaltyflowBaseUrl="https://ВАШ-ДОМЕН" \
+  -PloyaltyflowAppToken="$EVOTOR_APP_TOKEN" \
+  :app:assembleDebug
+```
+
+Не встраивайте токен в README, исходный код, скриншоты или публичные артефакты. Для GitHub Actions используйте secrets `LOYALTYFLOW_BASE_URL` и `LOYALTYFLOW_APP_TOKEN`.
+
+Сценарий резерва: APK вызывает `customer`, затем `reserve`; после возврата скидки в чек событие `RECEIPT_CLOSED` вызывает `commit`, а событие `CLEARED` вызывает `release`. Резерв живёт 10 минут и идемпотентен по `requestId`.
+
 ## Требуемый backend-контракт
 
 Нужны отдельные endpoint-ы приложения:
@@ -139,11 +163,12 @@ QR сохраняется как основной быстрый способ. �
 ## Правила для других агентов
 
 1. Не работать напрямую в production-ветке для Android-задач.
-2. Не удалять `/opt/loyaltyflow` и не выполнять `git reset` в нём без явного подтверждения.
-3. Сначала обновить отдельный worktree `/opt/loyaltyflow-evotor-app` через remote-tracking ветку `origin/feat/loyaltyflow-evotor-apk-20260918`.
-4. Не хранить в репозитории токены Эвотор, JWT, ключи подписи APK и пароли.
-5. Не считать debug APK готовым для публикации.
-6. Перед merge проверить сборку, backend-контракт и реальный терминал.
+2. Не публиковать `EVOTOR_APP_TOKEN` и не собирать production APK с токеном в открытом репозитории.
+3. Не удалять `/opt/loyaltyflow` и не выполнять `git reset` в нём без явного подтверждения.
+4. Сначала обновить отдельный worktree `/opt/loyaltyflow-evotor-app` через remote-tracking ветку `origin/feat/loyaltyflow-evotor-apk-20260918`.
+5. Не хранить в репозитории токены Эвотор, JWT, ключи подписи APK и пароли.
+6. Не считать debug APK готовым для публикации.
+7. Перед merge проверить сборку, backend-контракт и реальный терминал.
 
 
 ## GitHub Actions: ошибка `Failed to find package tools`

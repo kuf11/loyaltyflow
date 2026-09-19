@@ -1,6 +1,8 @@
 package ru.loyaltyflow.evotor;
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.RemoteException;
 
 import androidx.annotation.NonNull;
@@ -10,6 +12,8 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+
+import org.json.JSONObject;
 
 import ru.evotor.framework.core.IntegrationService;
 import ru.evotor.framework.core.action.event.receipt.changes.position.IPositionChange;
@@ -23,6 +27,7 @@ import ru.evotor.framework.receipt.ReceiptApi;
 
 /** Entry point shown by Evotor on the payment screen. */
 public final class LoyaltyDiscountService extends IntegrationService {
+    private static final String RESERVATIONS = "loyaltyflow_reservations";
     private static ActionProcessor.Callback pendingCallback;
 
     @Nullable
@@ -79,6 +84,36 @@ public final class LoyaltyDiscountService extends IntegrationService {
                     BigDecimal.valueOf(Math.max(0d, amount)), null, changes));
         } catch (RemoteException ignored) {
             // Evotor has already closed the callback; no retry is safe here.
+        }
+    }
+
+    static void rememberReservation(Context context, String receiptUuid, String reservationId) {
+        context.getSharedPreferences(RESERVATIONS, Context.MODE_PRIVATE)
+                .edit().putString(receiptUuid, reservationId).apply();
+    }
+
+    static void commitReservation(Context context, String receiptUuid) {
+        finishReservation(context, receiptUuid, true);
+    }
+
+    static void releaseReservation(Context context, String receiptUuid) {
+        finishReservation(context, receiptUuid, false);
+    }
+
+    private static void finishReservation(Context context, String receiptUuid, boolean commit) {
+        SharedPreferences preferences = context.getSharedPreferences(RESERVATIONS, Context.MODE_PRIVATE);
+        String reservationId = preferences.getString(receiptUuid, "");
+        if (reservationId == null || reservationId.isEmpty()) return;
+        try {
+            JSONObject result = commit
+                    ? LoyaltyApiClient.commit(reservationId, receiptUuid)
+                    : LoyaltyApiClient.release(reservationId, receiptUuid);
+            String status = result.optString("status", "");
+            if ("committed".equals(status) || "released".equals(status)) {
+                preferences.edit().remove(receiptUuid).apply();
+            }
+        } catch (Exception ignored) {
+            // The API operations are idempotent; a later receipt event can retry them.
         }
     }
 

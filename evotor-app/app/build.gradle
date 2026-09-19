@@ -1,5 +1,9 @@
 plugins { id 'com.android.application' }
 
+def loyaltyflowBaseUrl = project.findProperty('loyaltyflowBaseUrl') ?: 'https://CHANGE_ME.example'
+def loyaltyflowAppToken = project.findProperty('loyaltyflowAppToken') ?: ''
+def configString = { value -> '"' + String.valueOf(value).replace('\\', '\\\\').replace('"', '\\"') + '"' }
+
 android {
     namespace 'ru.loyaltyflow.evotor'
     compileSdk 35
@@ -10,7 +14,8 @@ android {
         targetSdk 28
         versionCode 1
         versionName '0.1.0'
-        buildConfigField 'String', 'LOYALTYFLOW_BASE_URL', '"https://CHANGE_ME.example"'
+        buildConfigField 'String', 'LOYALTYFLOW_BASE_URL', configString(loyaltyflowBaseUrl)
+        buildConfigField 'String', 'LOYALTYFLOW_APP_TOKEN', configString(loyaltyflowAppToken)
     }
 
     buildTypes {

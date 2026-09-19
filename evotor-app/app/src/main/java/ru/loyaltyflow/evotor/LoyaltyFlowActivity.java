@@ -8,28 +8,33 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import org.json.JSONObject;
+
 import java.util.Locale;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/**
- * First native payment-screen flow. Server-side quote/redeem endpoints are
- * intentionally required before production publishing.
- */
+/** Native payment-screen flow for QR/phone loyalty lookup. */
 public final class LoyaltyFlowActivity extends Activity {
     static final String EXTRA_FROM_PAYMENT = "from_payment";
     static final String EXTRA_RECEIPT_UUID = "receipt_uuid";
     static final String EXTRA_RECEIPT_TOTAL = "receipt_total";
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
-    private EditText qrInput, phoneInput, amountInput;
+    private EditText qrInput, phoneInput, amountInput, discountInput;
     private TextView status;
+    private String receiptUuid = "";
+    private String customerId = "";
     private double receiptTotal;
-    private double approvedDiscount = 0d;
+    private int maxDiscount;
+    private String reservationRequestId = UUID.randomUUID().toString();
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
         setTitle("LoyaltyFlow");
+        receiptUuid = getIntent().getStringExtra(EXTRA_RECEIPT_UUID);
+        if (receiptUuid == null) receiptUuid = "";
         receiptTotal = getIntent().getDoubleExtra(EXTRA_RECEIPT_TOTAL, 0d);
 
         LinearLayout root = new LinearLayout(this);
@@ -69,14 +74,21 @@ public final class LoyaltyFlowActivity extends Activity {
         amountInput.setEnabled(false);
         root.addView(amountInput);
 
+        discountInput = new EditText(this);
+        discountInput.setHint("Списать бонусов, ₽");
+        discountInput.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        discountInput.setSingleLine(true);
+        discountInput.setEnabled(false);
+        root.addView(discountInput);
+
         Button check = new Button(this);
         check.setText("Проверить клиента");
         check.setOnClickListener(v -> quote());
         root.addView(check);
 
         Button apply = new Button(this);
-        apply.setText("Применить скидку");
-        apply.setOnClickListener(v -> applyDiscount());
+        apply.setText("Зарезервировать и применить скидку");
+        apply.setOnClickListener(v -> reserveAndApply());
         root.addView(apply);
 
         Button cancel = new Button(this);
@@ -106,18 +118,60 @@ public final class LoyaltyFlowActivity extends Activity {
             return;
         }
 
-        String method = qr.isEmpty() ? "по номеру телефона" : "по QR-коду";
-        // The production implementation will call the authenticated
-        // /api/v1/evotor/app/customer endpoint and display level/limit here.
-        status.setText("Сумма из кассы: " + formatMoney(receiptTotal)
-                + " ₽. Ищем клиента " + method
-                + ". Подключите backend quote endpoint.");
+        status.setText("Ищем клиента и рассчитываем доступную скидку…");
+        executor.execute(() -> {
+            try {
+                JSONObject response = LoyaltyApiClient.findCustomer(qr, phone, receiptTotal, receiptUuid);
+                JSONObject customer = response.getJSONObject("customer");
+                JSONObject quote = response.getJSONObject("quote");
+                customerId = customer.getString("id");
+                maxDiscount = quote.optInt("maxDiscount", 0);
+                runOnUiThread(() -> {
+                    discountInput.setEnabled(maxDiscount > 0);
+                    discountInput.setText(maxDiscount > 0 ? String.valueOf(maxDiscount) : "0");
+                    status.setText("Клиент найден. Баланс: " + customer.optInt("balance", 0)
+                            + " ₽. Можно списать до " + maxDiscount + " ₽.");
+                });
+            } catch (Exception error) {
+                runOnUiThread(() -> status.setText(error.getMessage() == null
+                        ? "Не удалось проверить клиента" : error.getMessage()));
+            }
+        });
     }
 
-    private void applyDiscount() {
-        if (approvedDiscount <= 0d) { status.setText("Сначала проверьте клиента"); return; }
-        LoyaltyDiscountService.finishWithDiscount(approvedDiscount);
-        finish();
+    private void reserveAndApply() {
+        if (customerId.isEmpty() || maxDiscount <= 0) {
+            status.setText("Сначала проверьте клиента");
+            return;
+        }
+        int amount;
+        try {
+            amount = Integer.parseInt(discountInput.getText().toString().trim());
+        } catch (NumberFormatException error) {
+            status.setText("Введите сумму бонусов целым числом");
+            return;
+        }
+        if (amount <= 0 || amount > maxDiscount) {
+            status.setText("Сумма должна быть от 1 до " + maxDiscount + " ₽");
+            return;
+        }
+
+        status.setText("Резервируем бонусы…");
+        executor.execute(() -> {
+            try {
+                JSONObject response = LoyaltyApiClient.reserve(customerId, receiptUuid, reservationRequestId, amount, receiptTotal);
+                String reservationId = response.getString("reservationId");
+                LoyaltyDiscountService.rememberReservation(this, receiptUuid, reservationId);
+                runOnUiThread(() -> {
+                    status.setText("Скидка применена к чеку. Завершите продажу в Эвотор.");
+                    LoyaltyDiscountService.finishWithDiscount(amount);
+                    finish();
+                });
+            } catch (Exception error) {
+                runOnUiThread(() -> status.setText(error.getMessage() == null
+                        ? "Не удалось зарезервировать бонусы" : error.getMessage()));
+            }
+        });
     }
 
     private static String normalizePhone(String value) {

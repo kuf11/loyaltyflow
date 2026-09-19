@@ -26,22 +26,23 @@
 
 ## Получение ветки на сервере
 
-Команда безопасно добавляет приложение отдельным worktree и не меняет сайт:
+Команда безопасно добавляет приложение отдельным worktree и не меняет сайт. Важно явно создать remote-tracking ссылку: `FETCH_HEAD` внутри отдельного worktree недоступен.
 
 ```bash
 cd /opt/loyaltyflow && \
- git fetch --prune origin feat/loyaltyflow-evotor-apk-20260918 && \
+ BRANCH=feat/loyaltyflow-evotor-apk-20260918 && \
+ git fetch --prune origin "$BRANCH:refs/remotes/origin/$BRANCH" && \
  if [ -e /opt/loyaltyflow-evotor-app/.git ]; then \
-   git -C /opt/loyaltyflow-evotor-app reset --hard FETCH_HEAD; \
+   git -C /opt/loyaltyflow-evotor-app reset --hard "origin/$BRANCH"; \
  elif [ -d /opt/loyaltyflow-evotor-app ] && [ -n "$(find /opt/loyaltyflow-evotor-app -mindepth 1 -maxdepth 1 -print -quit)" ]; then \
    echo "Остановлено: каталог уже существует и не пустой"; exit 1; \
  else \
-   git worktree add /opt/loyaltyflow-evotor-app FETCH_HEAD; \
+   git worktree add /opt/loyaltyflow-evotor-app "origin/$BRANCH"; \
  fi && \
  git -C /opt/loyaltyflow-evotor-app status --short
 ```
 
-Используется явная remote-tracking ссылка, чтобы отдельный worktree всегда получал точную версию ветки.
+Эта команда обновляет только Android-worktree и не меняет `/opt/loyaltyflow`.
 
 ## Сборка debug APK через Docker
 
@@ -119,7 +120,7 @@ scp root@SERVER_IP:/opt/loyaltyflow-evotor-app/evotor-app/app/build/outputs/apk/
 
 1. Не работать напрямую в production-ветке для Android-задач.
 2. Не удалять `/opt/loyaltyflow` и не выполнять `git reset` в нём без явного подтверждения.
-3. Сначала обновить отдельный worktree `/opt/loyaltyflow-evotor-app` через `FETCH_HEAD`.
+3. Сначала обновить отдельный worktree `/opt/loyaltyflow-evotor-app` через remote-tracking ветку `origin/feat/loyaltyflow-evotor-apk-20260918`.
 4. Не хранить в репозитории токены Эвотор, JWT, ключи подписи APK и пароли.
 5. Не считать debug APK готовым для публикации.
 6. Перед merge проверить сборку, backend-контракт и реальный терминал.

@@ -50,7 +50,7 @@ cd /opt/loyaltyflow && \
 cd /opt/loyaltyflow-evotor-app && \
  docker run --rm \
    -v "$PWD:/workspace" \
-   -w /workspace \
+   -w /workspace/evotor-app \
    ghcr.io/cirruslabs/android-sdk:35 \
    bash -lc '''
      set -e

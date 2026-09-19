@@ -95,7 +95,7 @@ Turnstile применяется серверно и клиентски. Actions
 11. `miniapp-search-ui-fix.js`
 12. `miniapp-security.js`
 
-Поздние файлы исправляют ранний runtime, поэтому порядок нельзя менять без полного regression-теста. `miniapp.js`, `miniapp-v9.js` и `miniapp-stock-flags-fix.js` текущей страницей не загружаются.
+Поздние файлы исправляют ранний runtime, поэтому порядок нельзя менять без полного regression-теста. Legacy-файлы вне активного runtime не загружаются текущей страницей.
 
 ## Backend (`api/`)
 
@@ -116,7 +116,7 @@ Turnstile применяется серверно и клиентски. Actions
 | `init.sql` | Начальная схема PostgreSQL |
 | `Dockerfile`, `package.json` | Сборка и проверки API |
 
-Backend использует файл `api/schedule-api-preload.js`. Одноимённый файл в корне не является импортом API-контейнера.
+Backend использует файл `api/schedule-api-preload.js` для операций расписания.
 
 ## Docker и Nginx
 

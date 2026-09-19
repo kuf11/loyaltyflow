@@ -66,7 +66,7 @@ TOKEN-DIET MODE IS ACTIVE. Cut wasted words, never substance, correctness, or re
 11. `miniapp-search-ui-fix.js`
 12. `miniapp-security.js`
 
-`miniapp.js`, `miniapp-v9.js`, `miniapp-stock-flags-fix.js` и старые fix-файлы не подключены текущим `miniapp.html`; не редактировать их вместо активного runtime. После изменения порядка проверить запуск в Telegram, регистрацию, поиск, остатки, корзину, QR и навигацию.
+Старые файлы Mini App вне активного runtime не подключены текущим `miniapp.html`; не редактировать legacy-файлы вместо активного runtime. После изменения порядка проверить запуск в Telegram, регистрацию, поиск, остатки, корзину, QR и навигацию.
 
 ### Backend
 
@@ -84,7 +84,7 @@ TOKEN-DIET MODE IS ACTIVE. Cut wasted words, never substance, correctness, or re
 - `bot-menu-sync.js` — Telegram menu button.
 - `init.sql` — начальная PostgreSQL-схема.
 
-Корневой `schedule-api-preload.js` не является файлом, импортируемым API-контейнером; backend использует `api/schedule-api-preload.js`.
+Backend использует `api/schedule-api-preload.js` для операций расписания.
 
 ## 3. Инфраструктура
 

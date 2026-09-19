@@ -40,7 +40,7 @@ cd /opt/loyaltyflow && \
  git -C /opt/loyaltyflow-evotor-app status --short
 ```
 
-Почему используется `FETCH_HEAD`: обычный `git fetch origin <ветка>` может не создать локальную ссылку `origin/<ветка>`.
+Используется явная remote-tracking ссылка, чтобы отдельный worktree всегда получал точную версию ветки.
 
 ## Сборка debug APK через Docker
 
@@ -61,9 +61,9 @@ cd /opt/loyaltyflow-evotor-app && \
      "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0"
 
      mkdir -p /tmp/gradle
-     curl -fsSL https://services.gradle.org/distributions/gradle-8.7-bin.zip -o /tmp/gradle.zip
+     curl -fsSL https://services.gradle.org/distributions/gradle-8.9-bin.zip -o /tmp/gradle.zip
      unzip -q /tmp/gradle.zip -d /tmp
-     export PATH="/tmp/gradle-8.7/bin:$PATH"
+     export PATH="/tmp/gradle-8.9/bin:$PATH"
 
      gradle --no-daemon --stacktrace :app:assembleDebug
    '''

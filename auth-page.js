@@ -1,6 +1,6 @@
 (()=>{
   const form=document.getElementById('loginForm');
-  const safeReturnPath=()=>{const value=new URLSearchParams(location.search).get('next');if(!value||!value.startsWith('/')||value.startsWith('//'))return'/';try{const target=new URL(value,location.origin);return target.origin===location.origin?target.pathname+target.search+target.hash:'/'}catch{return'/'}};
+  const safeReturnPath=()=>{const value=new URLSearchParams(location.search).get('next');if(!value||!value.startsWith('/')||value.startsWith('//'))return'/index.html';try{const target=new URL(value,location.origin);return target.origin===location.origin?target.pathname+target.search+target.hash:'/'}catch{return'/index.html'}};
   form.noValidate=false;
   const wrap=document.createElement('div');wrap.className='captcha-wrap';const label=document.createElement('span');label.className='captcha-label';label.textContent='Проверка безопасности';const widget=document.createElement('div');widget.id='login-turnstile-widget';widget.className='cf-turnstile';const token=document.createElement('input');token.type='hidden';token.name='turnstileToken';const statusNode=document.createElement('div');statusNode.className='captcha-status';statusNode.textContent='Загрузка проверки безопасности…';wrap.append(label,widget,token,statusNode);form.querySelector('.submit').before(wrap);
   const status=form.querySelector('.captcha-status');

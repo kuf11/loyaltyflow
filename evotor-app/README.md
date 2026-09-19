@@ -65,7 +65,7 @@ cd /opt/loyaltyflow-evotor-app && \
      unzip -q /tmp/gradle.zip -d /tmp
      export PATH="/tmp/gradle-8.9/bin:$PATH"
 
-     gradle --no-daemon --max-workers=1 --console=plain -Dorg.gradle.jvmargs="-Xmx1024m -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8" -Dorg.gradle.vfs.watch=false --stacktrace :app:assembleDebug
+     gradle --no-daemon --max-workers=1 --console=plain -Dorg.gradle.jvmargs="-Xmx768m -XX:MaxMetaspaceSize=256m -Dfile.encoding=UTF-8" -Dorg.gradle.vfs.watch=false --stacktrace :app:assembleDebug
    '''
 ```
 
@@ -75,7 +75,7 @@ cd /opt/loyaltyflow-evotor-app && \
 /opt/loyaltyflow-evotor-app/evotor-app/app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Если появляется `BUILD SUCCESSFUL`, APK собран. Сборка использует один worker и ограничение памяти, чтобы не перегружать сервер. Если Docker не может скачать образ или Gradle — проверить доступ к реестру и интернет, не менять production-конфигурацию.
+Если появляется `BUILD SUCCESSFUL`, APK собран. Сборка настроена для сервера с 2 ГБ ОЗУ: один worker, heap 768 МБ и ограничение Metaspace 256 МБ. Если Docker не может скачать образ или Gradle — проверить доступ к реестру и интернет, не менять production-конфигурацию.
 
 ## Скачать APK
 
@@ -114,3 +114,17 @@ scp root@SERVER_IP:/opt/loyaltyflow-evotor-app/evotor-app/app/build/outputs/apk/
 4. Не хранить в репозитории токены Эвотор, JWT, ключи подписи APK и пароли.
 5. Не считать debug APK готовым для публикации.
 6. Перед merge проверить сборку, backend-контракт и реальный терминал.
+
+
+## GitHub Actions: ошибка `Failed to find package tools`
+
+Если `android-actions/setup-android@v3` завершается ошибкой `Failed to find package tools`, в workflow нужно явно указать поддерживаемые SDK-пакеты и не запрашивать устаревший пакет `tools`:
+
+```yaml
+- name: Android SDK
+  uses: android-actions/setup-android@v3
+  with:
+    packages: "platform-tools platforms;android-35 build-tools;35.0.0"
+```
+
+Для Java использовать `actions/setup-java@v5`.

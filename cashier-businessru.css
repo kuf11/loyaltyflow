@@ -1,1 +1,3 @@
+/* Business.Ru cashier lookup is temporarily disabled while discount-rule sync is finalized. */
+#businessRuButton{display:none!important}
 .business-ru-result{display:grid;gap:4px;margin-top:10px;padding:12px 14px;border:1px solid #315441;border-radius:10px;background:#13231b;color:#b6e5cc}.business-ru-result span{color:#e5eee8}.business-ru-result small{margin-top:4px;color:#9db0a5}.business-ru-result.error{border-color:#633238;background:#1b1417;color:#ff9298}@media(max-width:760px){.scanrow .btn{min-width:0}}

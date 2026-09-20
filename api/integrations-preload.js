@@ -43,7 +43,7 @@ const businessAccountOk=value=>/^[a-z0-9][a-z0-9-]{0,40}$/i.test(String(value||'
 const businessAppIdOk=value=>/^\d{1,20}$/.test(String(value||''));
 const businessSecretOk=value=>typeof value==='string'&&value.length>=16&&value.length<=128&&!/[\s\x00-\x1f\x7f]/.test(value);
 const businessCodeOk=value=>{const s=String(value||'').trim();return s.length>0&&s.length<=120&&!/[\x00-\x1f\x7f]/.test(s)};
-function businessFormValue(value){if(value===null||value===undefined)return'';if(Array.isArray(value))return value.map((item,index)=>encodeURIComponent(String(index))+'='+encodeURIComponent(String(item??''))).join('&');return encodeURIComponent(String(value))}
+function businessFormValue(value){const encode=value=>encodeURIComponent(String(value??'')).replace(/%20/g,'+').replace(/[!'()~]/g,char=>'%'+char.charCodeAt(0).toString(16).toUpperCase());if(value===null||value===undefined)return'';if(Array.isArray(value))return value.map((item,index)=>encode(index)+'='+encode(item)).join('&');return encode(value)}
 function businessQuery(params={}){return Object.keys(params).sort().map(key=>businessFormValue(key)+'='+businessFormValue(params[key])).join('&')}
 function businessBase(account){return'https://'+String(account).toLowerCase()+'.business.ru/api/rest/'}
 function businessCredentials(value){try{const parsed=JSON.parse(String(value||''));if(!businessAccountOk(parsed.account)||!businessAppIdOk(parsed.appId)||!businessSecretOk(parsed.secret))return null;return{account:String(parsed.account).toLowerCase(),appId:String(parsed.appId),secret:String(parsed.secret),token:typeof parsed.token==='string'?parsed.token:''}}catch{return null}}
